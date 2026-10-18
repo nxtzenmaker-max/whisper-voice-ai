@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const action = (formData.get('action') as string) || 'identify';
     const voiceprintStr = (formData.get('voiceprint') as string) || '';
     const pitchStr = (formData.get('pitch') as string) || '0';
-    const language = (formData.get('language') as string) || 'hi';
+    const language = (formData.get('language') as string) || 'hinglish';
 
     const incomingPitch = Math.round(Number(pitchStr) || 0);
 
@@ -40,19 +40,66 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Call Groq Whisper Large V3 Turbo API
+    // Call Groq Whisper Large V3 Turbo API with language-specific anchors
     const groq = new Groq({ apiKey });
+
+    let whisperLanguage: string | undefined = 'hi';
+    let whisperPrompt = 'नमस्ते, यह बातचीत हिंदी में है।';
+
+    if (language === 'en') {
+      whisperLanguage = 'en';
+      whisperPrompt = 'Hello, this is a clear English conversation.';
+    } else if (language === 'hi') {
+      whisperLanguage = 'hi';
+      whisperPrompt = 'नमस्ते, यह बातचीत हिंदी में है। साफ और सही हिंदी में लिखें।';
+    } else {
+      // 'hinglish' default: transcribe in Hindi first to avoid Nordic/Icelandic hallucinations
+      whisperLanguage = 'hi';
+      whisperPrompt = 'नमस्ते, यह बातचीत हिंदी और हिंग्लिश में है।';
+    }
+
     const transcription = await groq.audio.transcriptions.create({
       file: file,
       model: 'whisper-large-v3-turbo',
-      language: language !== 'auto' ? language : undefined,
-      prompt: 'Hindi, Hinglish aur English conversation transcription.',
+      language: whisperLanguage,
+      prompt: whisperPrompt,
       response_format: 'json',
       temperature: 0.0,
     });
 
+    let text = transcription.text.trim();
+
+    // If Hinglish is requested and text contains Devanagari characters,
+    // transliterate into clean natural conversational Roman Hinglish (e.g. "Aaj ka din kaisa hai")
+    if (language === 'hinglish' && /[\u0900-\u097F]/.test(text)) {
+      try {
+        const translit = await groq.chat.completions.create({
+          model: 'qwen/qwen3.8-27b',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Transliterate Hindi Devanagari text into natural conversational Roman Hinglish (English alphabet, e.g. "Aaj ka din kaisa tha aur kya chal raha hai"). If text is in English, keep it as is. Output ONLY the transliterated text, nothing else. No explanation.',
+            },
+            {
+              role: 'user',
+              content: text,
+            },
+          ],
+          temperature: 0.0,
+          max_tokens: 300,
+        });
+
+        const transliterated = translit.choices[0]?.message?.content?.trim();
+        if (transliterated && transliterated.length > 0) {
+          text = transliterated;
+        }
+      } catch (err) {
+        console.error('Hinglish transliteration fallback error:', err);
+      }
+    }
+
     const latencyMs = Date.now() - startTime;
-    const text = transcription.text.trim();
 
     // Speaker Identification Multi-Sample Logic
     let speakerName = 'Aap (Owner)';
@@ -73,7 +120,10 @@ export async function POST(req: NextRequest) {
       isOwner = true;
       speakerName = `Aap (Owner - Sample ${sampleCount} Saved ✅)`;
       matchPercent = 100;
-      detail = incomingPitch > 0 ? `Sample ${sampleCount} Enrolled (Pitch: ${incomingPitch}Hz)` : `Sample ${sampleCount} Enrolled`;
+      detail =
+        incomingPitch > 0
+          ? `Sample ${sampleCount} Enrolled (Pitch: ${incomingPitch}Hz)`
+          : `Sample ${sampleCount} Enrolled`;
       isNewRegistration = true;
     } else {
       const identification = identifySpeaker(incomingVector, incomingPitch, ownerProfile);

@@ -115,7 +115,7 @@ export default function Home() {
   const [avgPitch, setAvgPitch] = useState<number | null>(null);
   const [pitchRange, setPitchRange] = useState<string>('');
   const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
-  const [language, setLanguage] = useState<string>('hi');
+  const [language, setLanguage] = useState<string>('hinglish');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordDuration, setRecordDuration] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -573,20 +573,28 @@ export default function Home() {
 
         {/* Language Bar */}
         <div className="mt-2.5 flex items-center justify-between px-1">
-          <span className="text-[11px] text-slate-400 font-medium">Bhasha:</span>
+          <span className="text-[11px] text-slate-400 font-medium">Bhasha / Script:</span>
           <div className="flex gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setLanguage('hinglish')}
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition ${
+                language === 'hinglish' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Hinglish (ABCD)
+            </button>
             <button
               onClick={() => setLanguage('hi')}
               className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition ${
-                language === 'hi' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
+                language === 'hi' ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              हिन्दी / Hinglish
+              हिन्दी (कखग)
             </button>
             <button
               onClick={() => setLanguage('en')}
               className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition ${
-                language === 'en' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
+                language === 'en' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               English
