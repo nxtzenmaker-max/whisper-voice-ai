@@ -4,18 +4,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
   MicOff,
-  UserCheck,
-  UserX,
-  Database,
-  Zap,
-  Trash2,
   Copy,
   Check,
   Settings,
-  RefreshCw,
+  Trash2,
   Sparkles,
   ShieldCheck,
-  Fingerprint
+  RefreshCw,
+  Fingerprint,
+  UserCheck,
+  UserX,
+  Database,
+  Sliders,
+  Volume2,
 } from 'lucide-react';
 
 interface Transcription {
@@ -23,14 +24,94 @@ interface Transcription {
   speaker_name: string;
   is_owner: boolean;
   match_percent: number;
+  pitch?: number;
   text: string;
   latency_ms: number;
   created_at: string;
 }
 
+// Fast YIN Algorithm for accurate fundamental pitch (F0) detection
+function detectPitchYin(buffer: Float32Array, sampleRate: number): number | null {
+  const minPeriod = Math.floor(sampleRate / 350); // ~45 (up to 350 Hz)
+  const maxPeriod = Math.floor(sampleRate / 65);  // ~246 (down to 65 Hz)
+  const W = 1000;
+  if (buffer.length < W + maxPeriod) return null;
+
+  const d = new Float32Array(maxPeriod + 1);
+  for (let tau = 0; tau <= maxPeriod; tau++) {
+    let diff = 0;
+    for (let i = 0; i < W; i++) {
+      const delta = buffer[i] - buffer[i + tau];
+      diff += delta * delta;
+    }
+    d[tau] = diff;
+  }
+
+  const cmnd = new Float32Array(maxPeriod + 1);
+  cmnd[0] = 1;
+  let runningSum = 0;
+  for (let tau = 1; tau <= maxPeriod; tau++) {
+    runningSum += d[tau];
+    cmnd[tau] = d[tau] / (runningSum / tau);
+  }
+
+  let period = -1;
+  for (let tau = minPeriod; tau <= maxPeriod; tau++) {
+    if (cmnd[tau] < 0.20) {
+      while (tau + 1 <= maxPeriod && cmnd[tau + 1] < cmnd[tau]) {
+        tau++;
+      }
+      period = tau;
+      break;
+    }
+  }
+
+  return period > 0 ? Math.round(sampleRate / period) : null;
+}
+
+// Iterative in-place Radix-2 FFT
+function fftIterative(real: Float32Array, imag: Float32Array) {
+  const n = real.length;
+  let j = 0;
+  for (let i = 0; i < n - 1; i++) {
+    if (i < j) {
+      const tr = real[i]; real[i] = real[j]; real[j] = tr;
+      const ti = imag[i]; imag[i] = imag[j]; imag[j] = ti;
+    }
+    let k = n >> 1;
+    while (k <= j) { j -= k; k >>= 1; }
+    j += k;
+  }
+  for (let l = 2; l <= n; l <<= 1) {
+    const half = l >> 1;
+    const ang = -2 * Math.PI / l;
+    const wStepR = Math.cos(ang), wStepI = Math.sin(ang);
+    for (let i = 0; i < n; i += l) {
+      let wr = 1, wi = 0;
+      for (let k = 0; k < half; k++) {
+        const idx1 = i + k;
+        const idx2 = i + k + half;
+        const tr = wr * real[idx2] - wi * imag[idx2];
+        const ti = wr * imag[idx2] + wi * real[idx2];
+        real[idx2] = real[idx1] - tr;
+        imag[idx2] = imag[idx1] - ti;
+        real[idx1] += tr;
+        imag[idx1] += ti;
+        const nextWr = wr * wStepR - wi * wStepI;
+        wi = wr * wStepI + wi * wStepR;
+        wr = nextWr;
+      }
+    }
+  }
+}
+
+function hzToMel(hz: number) { return 2595 * Math.log10(1 + hz / 700); }
+function melToHz(mel: number) { return 700 * (Math.pow(10, mel / 2595) - 1); }
+
 export default function Home() {
   const [history, setHistory] = useState<Transcription[]>([]);
   const [hasOwnerVoice, setHasOwnerVoice] = useState<boolean>(false);
+  const [ownerPitch, setOwnerPitch] = useState<number | null>(null);
   const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<string>('hi');
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -63,6 +144,7 @@ export default function Home() {
       const res = await fetch('/api/voiceprint');
       const data = await res.json();
       setHasOwnerVoice(Boolean(data.has_owner));
+      if (data.owner_pitch) setOwnerPitch(data.owner_pitch);
       if (!data.has_owner) {
         setIsRegisterMode(true);
       }
@@ -75,14 +157,18 @@ export default function Home() {
     try {
       const res = await fetch('/api/history');
       const data = await res.json();
-      if (data.history) setHistory(data.history);
+      if (data.history) {
+        setHistory(data.history);
+      }
     } catch (e) {
       console.error('Fetch history error:', e);
     }
   };
 
-  // Extract a 32-dimensional spectral voiceprint vector from audio
-  const extractVoiceprint = async (audioBlob: Blob): Promise<number[]> => {
+  // Extract a 20-dimensional Mel-frequency vector + Pitch (F0) from audio
+  const extractVoiceFeatures = async (
+    audioBlob: Blob
+  ): Promise<{ vector: number[]; pitch: number }> => {
     try {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const offlineCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
@@ -90,38 +176,78 @@ export default function Home() {
       });
       const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
       const channelData = audioBuffer.getChannelData(0);
+      const sampleRate = 16000;
 
-      // FFT analysis across frames
-      const fftSize = 512;
-      const numBands = 32;
-      const vector = new Array(numBands).fill(0);
+      // 1. Detect Fundamental Pitch (F0) across voiced chunks
+      const pitches: number[] = [];
+      const frameStep = 3200; // 0.2s step
+      for (let i = 0; i <= channelData.length - 2000; i += frameStep) {
+        const slice = channelData.subarray(i, i + 2000);
+        let energy = 0;
+        for (let j = 0; j < slice.length; j++) energy += slice[j] * slice[j];
+        if (energy > 0.05) {
+          const p = detectPitchYin(slice, sampleRate);
+          if (p && p >= 65 && p <= 350) pitches.push(p);
+        }
+      }
+      pitches.sort((a, b) => a - b);
+      const medianPitch = pitches.length > 0 ? pitches[Math.floor(pitches.length / 2)] : 0;
+
+      // 2. Real FFT and 20-band Mel Filterbank
+      const N = 512;
+      const numMelBands = 20;
+      const melPoints: number[] = [];
+      const minMel = hzToMel(100);
+      const maxMel = hzToMel(sampleRate / 2);
+      for (let i = 0; i < numMelBands + 2; i++) {
+        const hz = melToHz(minMel + (maxMel - minMel) * (i / (numMelBands + 1)));
+        melPoints.push(Math.floor((hz / sampleRate) * N));
+      }
+
+      const melEnergies = new Float32Array(numMelBands);
       let framesCount = 0;
 
-      for (let i = 0; i < channelData.length - fftSize; i += fftSize) {
+      for (let start = 0; start <= channelData.length - N; start += N / 2) {
         framesCount++;
-        let frameEnergy = 0;
-        for (let j = 0; j < fftSize; j++) {
-          frameEnergy += Math.abs(channelData[i + j]);
-          const bandIdx = Math.floor((j / fftSize) * numBands);
-          vector[bandIdx] += Math.abs(channelData[i + j]);
+        const real = new Float32Array(N);
+        const imag = new Float32Array(N);
+        for (let i = 0; i < N; i++) {
+          const win = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (N - 1))); // Hann window
+          real[i] = channelData[start + i] * win;
+        }
+
+        fftIterative(real, imag);
+
+        for (let m = 0; m < numMelBands; m++) {
+          const left = melPoints[m];
+          const center = melPoints[m + 1];
+          const right = melPoints[m + 2];
+          let bandEnergy = 0;
+          for (let k = left; k < right; k++) {
+            const mag = Math.sqrt(real[k] * real[k] + imag[k] * imag[k]);
+            const weight = k < center ? (k - left) / (center - left || 1) : (right - k) / (right - center || 1);
+            bandEnergy += mag * weight;
+          }
+          melEnergies[m] += bandEnergy;
         }
       }
 
       offlineCtx.close();
 
-      if (framesCount === 0) return [];
-
-      // Normalize vector
-      let sum = 0;
-      for (let i = 0; i < numBands; i++) {
-        vector[i] = vector[i] / framesCount;
-        sum += vector[i] * vector[i];
+      if (framesCount > 0) {
+        for (let m = 0; m < numMelBands; m++) melEnergies[m] /= framesCount;
       }
-      const norm = Math.sqrt(sum) || 1;
-      return vector.map((v) => Number((v / norm).toFixed(4)));
+
+      // L2 Normalize
+      let sumSq = 0;
+      for (let m = 0; m < numMelBands; m++) sumSq += melEnergies[m] * melEnergies[m];
+      const norm = Math.sqrt(sumSq) || 1;
+      const vector = Array.from(melEnergies).map((v) => Number((v / norm).toFixed(4)));
+
+      return { vector, pitch: medianPitch };
     } catch (err) {
       console.error('Feature extraction error:', err);
-      return [];
+      return { vector: [], pitch: 0 };
     }
   };
 
@@ -176,7 +302,7 @@ export default function Home() {
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
       setRecordDuration(0);
-      setStatusMessage(isRegisterMode ? 'Apni aawaz me boliye (4-5s)...' : 'Sun raha hoon... Boliye!');
+      setStatusMessage(isRegisterMode ? 'Apni aawaz me boliye (3-5s)...' : 'Sun raha hoon... Boliye!');
 
       timerRef.current = setInterval(() => {
         setRecordDuration((prev) => prev + 1);
@@ -216,16 +342,17 @@ export default function Home() {
   const handleProcessVoice = async (blob: Blob) => {
     if (blob.size < 600) return;
     setIsProcessing(true);
-    setStatusMessage('Voiceprint verify aur Whisper transcription ho raha hai...');
+    setStatusMessage('Mel-Spectrogram & Pitch analysis chal raha hai...');
 
-    // 1. Extract voiceprint in browser
-    const voiceVector = await extractVoiceprint(blob);
+    // 1. Extract Mel-scale vector + pitch in browser
+    const { vector, pitch } = await extractVoiceFeatures(blob);
 
     // 2. Prepare FormData
     const formData = new FormData();
     formData.append('file', blob, 'speech.webm');
     formData.append('action', isRegisterMode ? 'register' : 'identify');
-    formData.append('voiceprint', JSON.stringify(voiceVector));
+    formData.append('voiceprint', JSON.stringify(vector));
+    formData.append('pitch', pitch.toString());
     formData.append('language', language);
 
     const headers: Record<string, string> = {};
@@ -246,13 +373,14 @@ export default function Home() {
 
       if (data.is_new_registration) {
         setHasOwnerVoice(true);
+        if (data.pitch) setOwnerPitch(data.pitch);
         setIsRegisterMode(false);
-        setStatusMessage('✅ Aapki aawaz successfully register ho gayi!');
+        setStatusMessage(`✅ Master Voiceprint Saved! (Pitch: ${data.pitch || 'N/A'}Hz)`);
       } else {
+        const icon = data.is_owner ? '🟢' : '🔵';
+        const pitchText = data.pitch > 0 ? ` [Pitch: ${data.pitch}Hz]` : '';
         setStatusMessage(
-          data.is_owner
-            ? `🟢 Identified: Aap (Owner) [${data.match_percent}% Match]`
-            : `🔵 Identified: Koi aur [${data.match_percent}% Match]`
+          `${icon} ${data.speaker_name} • ${data.match_percent}% Match${pitchText}`
         );
       }
 
@@ -263,6 +391,7 @@ export default function Home() {
             speaker_name: data.speaker_name,
             is_owner: data.is_owner,
             match_percent: data.match_percent,
+            pitch: data.pitch,
             text: data.text,
             latency_ms: data.latency_ms,
             created_at: new Date().toISOString(),
@@ -279,19 +408,20 @@ export default function Home() {
   };
 
   const handleResetVoiceprint = async () => {
-    if (!confirm('Kya aap saved Owner Voiceprint delete karke nayi aawaz save karna chahte hain?')) return;
+    if (!confirm('Kya aap saved Owner Voiceprint delete karna chahte hain?')) return;
     try {
       await fetch('/api/voiceprint', { method: 'DELETE' });
       setHasOwnerVoice(false);
+      setOwnerPitch(null);
       setIsRegisterMode(true);
-      setStatusMessage('Voiceprint reset. Ab apni nayi aawaz bolein.');
+      setStatusMessage('Voiceprint reset ho gaya. Nayi aawaz register karein.');
     } catch (e) {
       console.error(e);
     }
   };
 
   const handleClearHistory = async () => {
-    if (!confirm('Kya aap saara history delete karna chahte hain?')) return;
+    if (!confirm('Saari transcription history delete karein?')) return;
     try {
       await fetch('/api/history', { method: 'DELETE' });
       setHistory([]);
@@ -324,7 +454,7 @@ export default function Home() {
             <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
               Voiceprint AI Speaker ID
             </h1>
-            <p className="text-[11px] text-slate-400">Turso Edge DB • Groq Whisper LPU</p>
+            <p className="text-[11px] text-slate-400">Turso Edge DB • Groq Whisper LPU • Pitch & Mel-Spec</p>
           </div>
         </div>
 
@@ -345,7 +475,7 @@ export default function Home() {
             {hasOwnerVoice ? (
               <span className="flex items-center gap-1.5 text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
                 <ShieldCheck className="w-4 h-4" />
-                Owner Voiceprint: Active ✅
+                Owner Voice: Active ✅ {ownerPitch ? `(${ownerPitch}Hz)` : ''}
               </span>
             ) : (
               <span className="flex items-center gap-1.5 text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
@@ -450,7 +580,10 @@ export default function Home() {
           </div>
 
           <p className="text-xs text-slate-300 mt-2 font-medium text-center px-4">
-            {statusMessage || (isRegisterMode ? 'Apni aawaz register karne ke liye boliye' : 'Boliye, AI khud pehchanega ki kaun bol raha hai!')}
+            {statusMessage ||
+              (isRegisterMode
+                ? 'Apni aawaz register karne ke liye boliye'
+                : 'Boliye, AI Pitch & Voiceprint se pehchanega!')}
           </p>
         </div>
 
@@ -506,7 +639,9 @@ export default function Home() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-md border border-slate-800">
-                        {item.match_percent > 0 ? `${item.match_percent}% Match • ` : ''}⚡ {item.latency_ms}ms
+                        {item.match_percent > 0 ? `${item.match_percent}% Match • ` : ''}
+                        {item.pitch && item.pitch > 0 ? `${item.pitch}Hz • ` : ''}
+                        ⚡ {item.latency_ms}ms
                       </span>
                       <button
                         onClick={() => copyToClipboard(item.text, item.id)}
@@ -521,9 +656,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm font-normal text-slate-100 leading-relaxed">
-                    &ldquo;{item.text}&rdquo;
-                  </p>
+                  <p className="text-sm font-medium leading-relaxed">{item.text}</p>
                 </div>
               ))
             )}
@@ -546,7 +679,7 @@ export default function Home() {
             <div className="space-y-3">
               <div>
                 <label className="text-[11px] font-semibold text-slate-300 block mb-1">
-                  Custom Groq API Key (Optional)
+                  Groq API Key (Optional Override)
                 </label>
                 <input
                   type="password"
@@ -556,12 +689,12 @@ export default function Home() {
                     setGroqKey(e.target.value);
                     localStorage.setItem('custom_groq_key', e.target.value);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
                 />
               </div>
 
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <span className="font-semibold text-slate-200 block">Turso DB Connection:</span>
+              <div className="text-[11px] text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800 font-mono space-y-1">
+                <span className="font-bold text-slate-300 block mb-1">Turso DB Config (.env):</span>
                 <span>• `TURSO_DATABASE_URL` (libsql://...)</span>
                 <br />
                 <span>• `TURSO_AUTH_TOKEN` (ey...)</span>
@@ -571,7 +704,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end">
+            <div className="flex justify-end mt-5">
               <button
                 onClick={() => setShowSettings(false)}
                 className="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold"

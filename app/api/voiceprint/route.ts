@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getOwnerVoiceprint, resetOwnerVoiceprint } from '@/lib/db';
+import { getOwnerProfile, resetOwnerVoiceprint } from '@/lib/db';
 
 export async function GET() {
   try {
-    const ownerVoiceprint = await getOwnerVoiceprint();
+    const profile = await getOwnerProfile();
     return NextResponse.json({
-      has_owner: Boolean(ownerVoiceprint && ownerVoiceprint.length > 0),
+      has_owner: Boolean(profile && profile.vector && profile.vector.length > 0),
+      owner_pitch: profile ? profile.pitch : null,
     });
   } catch (error: any) {
     return NextResponse.json({ has_owner: false, error: error?.message }, { status: 500 });

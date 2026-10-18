@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
-import { getDb, initDb, getOwnerVoiceprint, saveOwnerVoiceprint } from '@/lib/db';
+import { getDb, initDb, getOwnerProfile, saveOwnerProfile } from '@/lib/db';
 import { identifySpeaker } from '@/lib/voiceprint';
 import crypto from 'crypto';
 
@@ -11,7 +11,10 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File | null;
     const action = (formData.get('action') as string) || 'identify';
     const voiceprintStr = (formData.get('voiceprint') as string) || '';
+    const pitchStr = (formData.get('pitch') as string) || '0';
     const language = (formData.get('language') as string) || 'hi';
+
+    const incomingPitch = Math.round(Number(pitchStr) || 0);
 
     const customApiKey = req.headers.get('x-groq-api-key') || '';
     const apiKey = customApiKey || process.env.GROQ_API_KEY || '';
@@ -51,28 +54,31 @@ export async function POST(req: NextRequest) {
     const latencyMs = Date.now() - startTime;
     const text = transcription.text.trim();
 
-    // Speaker Identification Logic
+    // Speaker Identification Multi-Factor Logic
     let speakerName = 'Aap (Owner)';
     let isOwner = true;
     let matchPercent = 100;
+    let detail = '';
     let isNewRegistration = false;
 
     await initDb();
-    const ownerVoiceprint = await getOwnerVoiceprint();
+    const ownerProfile = await getOwnerProfile();
 
-    if (action === 'register' || !ownerVoiceprint) {
+    if (action === 'register' || !ownerProfile) {
       if (incomingVector.length > 0) {
-        await saveOwnerVoiceprint(incomingVector);
+        await saveOwnerProfile(incomingVector, incomingPitch);
       }
       isOwner = true;
       speakerName = 'Aap (Owner - Registered ✅)';
       matchPercent = 100;
+      detail = incomingPitch > 0 ? `Baseline Pitch: ${incomingPitch}Hz` : 'Baseline registered';
       isNewRegistration = true;
     } else {
-      const identification = identifySpeaker(incomingVector, ownerVoiceprint);
+      const identification = identifySpeaker(incomingVector, incomingPitch, ownerProfile);
       isOwner = identification.isOwner;
       speakerName = identification.speakerName;
       matchPercent = identification.matchPercent;
+      detail = identification.detail || '';
     }
 
     // Save transcription to Turso DB
@@ -80,8 +86,8 @@ export async function POST(req: NextRequest) {
     try {
       const db = getDb();
       await db.execute({
-        sql: `INSERT INTO transcriptions (id, speaker_name, is_owner, match_percent, text, latency_ms) VALUES (?, ?, ?, ?, ?, ?);`,
-        args: [id, speakerName, isOwner ? 1 : 0, matchPercent, text, latencyMs],
+        sql: `INSERT INTO transcriptions (id, speaker_name, is_owner, match_percent, pitch, text, latency_ms) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+        args: [id, speakerName, isOwner ? 1 : 0, matchPercent, incomingPitch, text, latencyMs],
       });
     } catch (dbErr) {
       console.error('Turso DB save error:', dbErr);
@@ -93,6 +99,8 @@ export async function POST(req: NextRequest) {
       speaker_name: speakerName,
       is_owner: isOwner,
       match_percent: matchPercent,
+      pitch: incomingPitch,
+      detail,
       is_new_registration: isNewRegistration,
       latency_ms: latencyMs,
     });

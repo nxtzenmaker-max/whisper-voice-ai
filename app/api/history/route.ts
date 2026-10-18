@@ -6,7 +6,7 @@ export async function GET() {
     await initDb();
     const db = getDb();
     const result = await db.execute(`
-      SELECT id, speaker_name, is_owner, match_percent, text, latency_ms, created_at
+      SELECT id, speaker_name, is_owner, match_percent, pitch, text, latency_ms, created_at
       FROM transcriptions
       ORDER BY created_at DESC
       LIMIT 50;
@@ -17,6 +17,7 @@ export async function GET() {
       speaker_name: row.speaker_name,
       is_owner: Boolean(row.is_owner),
       match_percent: row.match_percent ?? 0,
+      pitch: row.pitch ?? 0,
       text: row.text,
       latency_ms: row.latency_ms,
       created_at: row.created_at,
