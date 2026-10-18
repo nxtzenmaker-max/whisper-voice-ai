@@ -15,8 +15,8 @@ import {
   UserCheck,
   UserX,
   Database,
-  Sliders,
-  Volume2,
+  PlusCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface Transcription {
@@ -33,7 +33,7 @@ interface Transcription {
 // Fast YIN Algorithm for accurate fundamental pitch (F0) detection
 function detectPitchYin(buffer: Float32Array, sampleRate: number): number | null {
   const minPeriod = Math.floor(sampleRate / 350); // ~45 (up to 350 Hz)
-  const maxPeriod = Math.floor(sampleRate / 65);  // ~246 (down to 65 Hz)
+  const maxPeriod = Math.floor(sampleRate / 65); // ~246 (down to 65 Hz)
   const W = 1000;
   if (buffer.length < W + maxPeriod) return null;
 
@@ -111,7 +111,9 @@ function melToHz(mel: number) { return 700 * (Math.pow(10, mel / 2595) - 1); }
 export default function Home() {
   const [history, setHistory] = useState<Transcription[]>([]);
   const [hasOwnerVoice, setHasOwnerVoice] = useState<boolean>(false);
-  const [ownerPitch, setOwnerPitch] = useState<number | null>(null);
+  const [sampleCount, setSampleCount] = useState<number>(0);
+  const [avgPitch, setAvgPitch] = useState<number | null>(null);
+  const [pitchRange, setPitchRange] = useState<string>('');
   const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<string>('hi');
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -120,6 +122,13 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Suggested registration prompts
+  const registerPrompts = [
+    'Sample 1/3: "Namaste! Mera naam Jaino hai aur main owner hoon."',
+    'Sample 2/3: "Aaj ka din kaisa hai aur kya chal raha hai?"',
+    'Sample 3/3: "Whisper Voice AI automatic multi-speaker test."',
+  ];
 
   // Settings
   const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -144,7 +153,11 @@ export default function Home() {
       const res = await fetch('/api/voiceprint');
       const data = await res.json();
       setHasOwnerVoice(Boolean(data.has_owner));
-      if (data.owner_pitch) setOwnerPitch(data.owner_pitch);
+      setSampleCount(data.sample_count || 0);
+      setAvgPitch(data.avg_pitch || null);
+      if (data.min_pitch && data.max_pitch) {
+        setPitchRange(`${data.min_pitch}-${data.max_pitch}Hz`);
+      }
       if (!data.has_owner) {
         setIsRegisterMode(true);
       }
@@ -302,7 +315,11 @@ export default function Home() {
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
       setRecordDuration(0);
-      setStatusMessage(isRegisterMode ? 'Apni aawaz me boliye (3-5s)...' : 'Sun raha hoon... Boliye!');
+      setStatusMessage(
+        isRegisterMode
+          ? `Sample ${Math.min(sampleCount + 1, 3)} bol rahe hain... (3-5s bolein)`
+          : 'Sun raha hoon... Boliye!'
+      );
 
       timerRef.current = setInterval(() => {
         setRecordDuration((prev) => prev + 1);
@@ -342,7 +359,7 @@ export default function Home() {
   const handleProcessVoice = async (blob: Blob) => {
     if (blob.size < 600) return;
     setIsProcessing(true);
-    setStatusMessage('Mel-Spectrogram & Pitch analysis chal raha hai...');
+    setStatusMessage('Voice analysis aur Groq Whisper transcription ho raha hai...');
 
     // 1. Extract Mel-scale vector + pitch in browser
     const { vector, pitch } = await extractVoiceFeatures(blob);
@@ -373,12 +390,18 @@ export default function Home() {
 
       if (data.is_new_registration) {
         setHasOwnerVoice(true);
-        if (data.pitch) setOwnerPitch(data.pitch);
-        setIsRegisterMode(false);
-        setStatusMessage(`✅ Master Voiceprint Saved! (Pitch: ${data.pitch || 'N/A'}Hz)`);
+        const count = data.sample_count || sampleCount + 1;
+        setSampleCount(count);
+        if (data.pitch) setAvgPitch(data.pitch);
+        if (count >= 3) {
+          setIsRegisterMode(false);
+          setStatusMessage('🎉 3/3 Voice Samples Complete! Voice Profile Locked & Ready!');
+        } else {
+          setStatusMessage(`✅ Sample ${count} Saved! Ab alag sentence bolein (Sample ${count + 1}/3)...`);
+        }
       } else {
         const icon = data.is_owner ? '🟢' : '🔵';
-        const pitchText = data.pitch > 0 ? ` [Pitch: ${data.pitch}Hz]` : '';
+        const pitchText = data.pitch > 0 ? ` [${data.pitch}Hz]` : '';
         setStatusMessage(
           `${icon} ${data.speaker_name} • ${data.match_percent}% Match${pitchText}`
         );
@@ -408,13 +431,15 @@ export default function Home() {
   };
 
   const handleResetVoiceprint = async () => {
-    if (!confirm('Kya aap saved Owner Voiceprint delete karna chahte hain?')) return;
+    if (!confirm('Kya aap saare saved Owner Voice Samples delete karna chahte hain?')) return;
     try {
       await fetch('/api/voiceprint', { method: 'DELETE' });
       setHasOwnerVoice(false);
-      setOwnerPitch(null);
+      setSampleCount(0);
+      setAvgPitch(null);
+      setPitchRange('');
       setIsRegisterMode(true);
-      setStatusMessage('Voiceprint reset ho gaya. Nayi aawaz register karein.');
+      setStatusMessage('Voice samples reset ho gaye. Alag-alag 3 voice notes record karein.');
     } catch (e) {
       console.error(e);
     }
@@ -447,14 +472,14 @@ export default function Home() {
       {/* Top Navbar */}
       <header className="w-full max-w-2xl flex items-center justify-between pb-3 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Fingerprint className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+            <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
               Voiceprint AI Speaker ID
             </h1>
-            <p className="text-[11px] text-slate-400">Turso Edge DB • Groq Whisper LPU • Pitch & Mel-Spec</p>
+            <p className="text-[11px] text-slate-400">Multi-Sample Voice Enrollment • Turso Edge DB</p>
           </div>
         </div>
 
@@ -469,18 +494,19 @@ export default function Home() {
 
       {/* Main Container */}
       <main className="w-full max-w-2xl flex-1 flex flex-col mt-3.5">
-        {/* Owner Status Bar */}
-        <section className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex items-center justify-between">
+        {/* Owner Multi-Sample Status Bar */}
+        <section className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 text-xs">
             {hasOwnerVoice ? (
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                <ShieldCheck className="w-4 h-4" />
-                Owner Voice: Active ✅ {ownerPitch ? `(${ownerPitch}Hz)` : ''}
+              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/30">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                Owner: Active ({sampleCount} {sampleCount === 1 ? 'Sample' : 'Samples'}
+                {pitchRange ? ` • ${pitchRange}` : avgPitch ? ` • ~${avgPitch}Hz` : ''}) ✅
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
-                <UserX className="w-4 h-4" />
-                Owner Voice: Not Registered ⚠️
+              <span className="flex items-center gap-1.5 text-amber-400 font-semibold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/30">
+                <UserX className="w-4 h-4 text-amber-400" />
+                Owner Voice: Not Registered ({sampleCount}/3 Samples) ⚠️
               </span>
             )}
           </div>
@@ -489,24 +515,61 @@ export default function Home() {
             {hasOwnerVoice && (
               <button
                 onClick={handleResetVoiceprint}
-                className="text-[11px] text-slate-400 hover:text-red-400 transition flex items-center gap-1"
-                title="Reset Voiceprint"
+                className="text-[11px] text-slate-400 hover:text-red-400 transition flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800"
+                title="Reset All Samples"
               >
                 <RefreshCw className="w-3 h-3" /> Reset
               </button>
             )}
+
             <button
               onClick={() => setIsRegisterMode(!isRegisterMode)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
                 isRegisterMode
-                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-                  : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/30'
+                  : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/40'
               }`}
             >
-              {isRegisterMode ? '🎙️ Registering Mode' : 'Identify Mode'}
+              {isRegisterMode ? (
+                <>🎙️ Registering ({sampleCount}/3)</>
+              ) : (
+                <>
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  {sampleCount === 0 ? 'Register Voice' : 'Add Sample'}
+                </>
+              )}
             </button>
           </div>
         </section>
+
+        {/* Multi-Sample Prompt Card (if registering) */}
+        {isRegisterMode && (
+          <div className="mt-3 p-3.5 bg-amber-950/20 border border-amber-500/30 rounded-2xl">
+            <div className="flex items-center justify-between text-xs font-bold text-amber-400 mb-1.5">
+              <span>🎙️ Voice Enrollment (Alag-Alag 3 Samples Boliye):</span>
+              <span>{sampleCount}/3 Samples</span>
+            </div>
+            <p className="text-xs text-amber-200/90 leading-relaxed">
+              👉 {registerPrompts[sampleCount % registerPrompts.length]}
+            </p>
+            <div className="flex items-center gap-2 mt-2.5">
+              <div className="flex-1 bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-amber-400 h-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (sampleCount / 3) * 100)}%` }}
+                />
+              </div>
+              {sampleCount > 0 && (
+                <button
+                  onClick={() => setIsRegisterMode(false)}
+                  className="text-[11px] text-emerald-400 font-semibold hover:underline"
+                >
+                  Done (Identify Mode) →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Language Bar */}
         <div className="mt-2.5 flex items-center justify-between px-1">
@@ -550,7 +613,7 @@ export default function Home() {
                   ? 'bg-slate-800 text-slate-400 opacity-60'
                   : isRegisterMode
                   ? 'bg-gradient-to-tr from-amber-500 to-orange-600 shadow-amber-500/30 hover:scale-105'
-                  : 'bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-cyan-500/30 hover:scale-105 active:scale-95'
+                  : 'bg-gradient-to-tr from-emerald-500 to-cyan-600 shadow-emerald-500/30 hover:scale-105 active:scale-95'
               }`}
             >
               {isRecording ? (
@@ -563,8 +626,8 @@ export default function Home() {
               ) : (
                 <>
                   <Mic className="w-9 h-9 text-white" />
-                  <span className="text-[9px] font-medium text-cyan-100 tracking-wider mt-0.5 uppercase">
-                    {isRegisterMode ? 'Save Voice' : 'Tap to Speak'}
+                  <span className="text-[9px] font-medium text-emerald-100 tracking-wider mt-0.5 uppercase">
+                    {isRegisterMode ? `Save (${sampleCount + 1}/3)` : 'Tap to Speak'}
                   </span>
                 </>
               )}
@@ -582,18 +645,18 @@ export default function Home() {
           <p className="text-xs text-slate-300 mt-2 font-medium text-center px-4">
             {statusMessage ||
               (isRegisterMode
-                ? 'Apni aawaz register karne ke liye boliye'
-                : 'Boliye, AI Pitch & Voiceprint se pehchanega!')}
+                ? `Alag sentence me boliye taaki voice sample save ho sake (${sampleCount}/3)`
+                : 'Boliye, aap bolenge toh GREEN ho jayega!')}
           </p>
         </div>
 
-        {/* Live Feed & History from Turso DB */}
+        {/* Live Feed & History from Turso DB ("aur green hojaaye jo bhi bolu") */}
         <section className="flex-1 flex flex-col bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-hidden min-h-[300px]">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-cyan-400" />
+              <Database className="w-4 h-4 text-emerald-400" />
               <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Turso DB Live Feed ({history.length})
+                Live Transcription Feed ({history.length})
               </h2>
             </div>
             {history.length > 0 && (
@@ -606,46 +669,51 @@ export default function Home() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto mt-3 flex flex-col gap-3 pr-1">
+          <div className="flex-1 overflow-y-auto mt-3 flex flex-col gap-3.5 pr-1">
             {history.length === 0 ? (
               <div className="m-auto text-center py-10 text-slate-500 text-xs">
                 <Sparkles className="w-6 h-6 mx-auto mb-2 text-slate-600" />
                 Abhi tak koi recording nahi hai.
                 <br />
-                Mic button daba kar boliye, AI pehchan kar yahan print karega!
+                Mic button daba kar boliye, aapki aawaz aate hi <span className="text-emerald-400 font-bold">GREEN</span> ho jayega!
               </div>
             ) : (
               history.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3.5 rounded-xl border transition ${
+                  className={`p-4 rounded-2xl transition-all duration-200 ${
                     item.is_owner
-                      ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-100'
-                      : 'bg-blue-950/20 border-blue-500/30 text-blue-100'
+                      ? 'bg-gradient-to-br from-emerald-950/60 via-slate-950 to-emerald-950/40 border-2 border-emerald-500/80 shadow-xl shadow-emerald-500/15 ring-1 ring-emerald-500/30'
+                      : 'bg-slate-900/60 border border-slate-800 text-slate-300'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-2">
                     <span
                       className={`text-xs font-bold flex items-center gap-1.5 ${
-                        item.is_owner ? 'text-emerald-400' : 'text-blue-400'
+                        item.is_owner ? 'text-emerald-300' : 'text-blue-400'
                       }`}
                     >
                       {item.is_owner ? (
-                        <UserCheck className="w-4 h-4 text-emerald-400" />
+                        <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          Aap (Owner)
+                        </span>
                       ) : (
-                        <UserX className="w-4 h-4 text-blue-400" />
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300">
+                          <UserX className="w-3.5 h-3.5 text-blue-400" />
+                          {item.speaker_name}
+                        </span>
                       )}
-                      {item.speaker_name}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-md border border-slate-800">
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-950/80 px-2 py-0.5 rounded-md border border-slate-800">
                         {item.match_percent > 0 ? `${item.match_percent}% Match • ` : ''}
                         {item.pitch && item.pitch > 0 ? `${item.pitch}Hz • ` : ''}
                         ⚡ {item.latency_ms}ms
                       </span>
                       <button
                         onClick={() => copyToClipboard(item.text, item.id)}
-                        className="text-slate-400 hover:text-white transition"
+                        className="text-slate-400 hover:text-white transition p-1"
                         title="Copy text"
                       >
                         {copiedId === item.id ? (
@@ -656,7 +724,13 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm font-medium leading-relaxed">{item.text}</p>
+                  <p
+                    className={`text-sm leading-relaxed ${
+                      item.is_owner ? 'text-emerald-100 font-semibold' : 'text-slate-200 font-normal'
+                    }`}
+                  >
+                    {item.text}
+                  </p>
                 </div>
               ))
             )}
@@ -669,7 +743,7 @@ export default function Home() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-md shadow-2xl">
             <h3 className="text-sm font-bold text-slate-200 mb-2 flex items-center gap-2">
-              <Settings className="w-4 h-4 text-cyan-400" />
+              <Settings className="w-4 h-4 text-emerald-400" />
               API & Turso Database Settings
             </h3>
             <p className="text-xs text-slate-400 mb-4">
@@ -689,7 +763,7 @@ export default function Home() {
                     setGroqKey(e.target.value);
                     localStorage.setItem('custom_groq_key', e.target.value);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -707,7 +781,7 @@ export default function Home() {
             <div className="flex justify-end mt-5">
               <button
                 onClick={() => setShowSettings(false)}
-                className="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold"
+                className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold"
               >
                 Close
               </button>

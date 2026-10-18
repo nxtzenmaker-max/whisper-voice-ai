@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
-import { getDb, initDb, getOwnerProfile, saveOwnerProfile } from '@/lib/db';
+import { getDb, initDb, getOwnerProfile, addOwnerSample } from '@/lib/db';
 import { identifySpeaker } from '@/lib/voiceprint';
 import crypto from 'crypto';
 
@@ -54,24 +54,26 @@ export async function POST(req: NextRequest) {
     const latencyMs = Date.now() - startTime;
     const text = transcription.text.trim();
 
-    // Speaker Identification Multi-Factor Logic
+    // Speaker Identification Multi-Sample Logic
     let speakerName = 'Aap (Owner)';
     let isOwner = true;
     let matchPercent = 100;
     let detail = '';
     let isNewRegistration = false;
+    let sampleCount = 1;
 
     await initDb();
     const ownerProfile = await getOwnerProfile();
 
-    if (action === 'register' || !ownerProfile) {
+    if (action === 'register' || !ownerProfile || ownerProfile.samples.length === 0) {
       if (incomingVector.length > 0) {
-        await saveOwnerProfile(incomingVector, incomingPitch);
+        const res = await addOwnerSample(incomingVector, incomingPitch);
+        sampleCount = res.sampleCount;
       }
       isOwner = true;
-      speakerName = 'Aap (Owner - Registered ✅)';
+      speakerName = `Aap (Owner - Sample ${sampleCount} Saved ✅)`;
       matchPercent = 100;
-      detail = incomingPitch > 0 ? `Baseline Pitch: ${incomingPitch}Hz` : 'Baseline registered';
+      detail = incomingPitch > 0 ? `Sample ${sampleCount} Enrolled (Pitch: ${incomingPitch}Hz)` : `Sample ${sampleCount} Enrolled`;
       isNewRegistration = true;
     } else {
       const identification = identifySpeaker(incomingVector, incomingPitch, ownerProfile);
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
       speakerName = identification.speakerName;
       matchPercent = identification.matchPercent;
       detail = identification.detail || '';
+      sampleCount = ownerProfile.samples.length;
     }
 
     // Save transcription to Turso DB
@@ -102,6 +105,7 @@ export async function POST(req: NextRequest) {
       pitch: incomingPitch,
       detail,
       is_new_registration: isNewRegistration,
+      sample_count: sampleCount,
       latency_ms: latencyMs,
     });
   } catch (error: any) {
