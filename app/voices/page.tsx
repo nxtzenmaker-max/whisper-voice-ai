@@ -9,123 +9,139 @@ import {
   Square,
   Sparkles,
   Check,
-  Sliders,
   ArrowLeft,
   Bot,
   Zap,
   Radio,
   Heart,
   Shield,
-  RefreshCw,
-  SlidersHorizontal,
   MessageSquare,
+  Loader2,
+  Cpu,
 } from 'lucide-react';
 
 interface VoicePersona {
   id: string;
   name: string;
+  engine: string;
   badge: string;
-  lang: string;
+  provider: 'openai' | 'aws-polly';
+  voice: string;
+  lang?: string;
   gender: 'male' | 'female';
   desc: string;
   sampleText: string;
-  defaultPitch: number;
-  defaultRate: number;
   icon: any;
   color: string;
 }
 
-const VOICE_PERSONAS: VoicePersona[] = [
+const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
   {
-    id: 'jarvis-uk',
-    name: 'Jarvis (British Deep Hinglish)',
-    badge: 'Iron Man Style 🤖',
-    lang: 'en-GB',
+    id: 'openai-onyx',
+    name: 'Jarvis Prime (OpenAI Onyx)',
+    engine: 'OpenAI Neural TTS',
+    badge: 'Deep & Cinematic 🦾',
+    provider: 'openai',
+    voice: 'onyx',
     gender: 'male',
-    desc: 'Deep, calm, and royal British butler tone speaking natural Hinglish. Best for Jarvis assistant.',
+    desc: 'Studio-grade ultra deep cinematic male voice. Sounds exactly like a Hollywood movie AI.',
     sampleText: 'Good evening boss, aapka saara system online hai. Boliye, aaj kya order hai?',
-    defaultPitch: 0.82,
-    defaultRate: 0.95,
     icon: Bot,
     color: 'from-amber-500 to-yellow-600',
   },
   {
-    id: 'desi-techie',
-    name: 'Rohan (Desi Bro Hinglish)',
-    badge: 'Most Natural Hinglish 🇮🇳',
-    lang: 'en-IN',
+    id: 'polly-brian',
+    name: 'Sir Brian (British Butler)',
+    engine: 'AWS Polly Neural',
+    badge: 'Royal British 🇬🇧',
+    provider: 'aws-polly',
+    voice: 'Brian',
+    lang: 'en-GB',
     gender: 'male',
-    desc: 'Natural Indian accent. Speaks casual Hinglish words cleanly with a friendly bhai tone.',
+    desc: 'The iconic calm British butler voice. Speaks Hinglish with sophisticated elegance.',
+    sampleText: 'Good day boss. Security protocols are active and ready for your command.',
+    icon: Shield,
+    color: 'from-blue-600 to-indigo-700',
+  },
+  {
+    id: 'polly-kajal',
+    name: 'Kajal (Indian Hinglish Neural)',
+    engine: 'AWS Polly Indian Neural',
+    badge: '100% Desi Hinglish 🇮🇳',
+    provider: 'aws-polly',
+    voice: 'Kajal',
+    lang: 'hi-IN',
+    gender: 'female',
+    desc: 'Natural Indian neural accent. Pronounces Hinglish and Hindi words with human-level perfection.',
     sampleText: 'Haan bhai, boliye kya scene hai? Aapka code aur database sab tayyar hai.',
-    defaultPitch: 0.95,
-    defaultRate: 1.0,
     icon: Radio,
     color: 'from-emerald-500 to-teal-600',
   },
   {
-    id: 'swara-hindi',
-    name: 'Pooja (Friendly Female Hinglish)',
-    badge: 'Sweet & Polite 🌸',
-    lang: 'en-IN',
+    id: 'openai-nova',
+    name: 'Friday (OpenAI Nova)',
+    engine: 'OpenAI Neural TTS',
+    badge: 'Warm & Modern 🌸',
+    provider: 'openai',
+    voice: 'nova',
     gender: 'female',
-    desc: 'Sweet, polite, and crystal-clear female voice speaking natural conversational Hinglish.',
-    sampleText: 'Hello! Main aapki AI assistant hoon. Boliye, aaj main aapki kya help kar sakti hoon?',
-    defaultPitch: 1.05,
-    defaultRate: 0.95,
+    desc: 'Warm, natural, expressive modern female AI. Fast, friendly, and super pleasant.',
+    sampleText: 'Hello boss! Main aapki AI assistant hoon. Boliye, aaj main aapki kya help kar sakti hoon?',
     icon: Heart,
     color: 'from-rose-500 to-pink-600',
   },
   {
-    id: 'tony-us',
-    name: 'Tony (Fast Tech Hinglish)',
-    badge: 'Fast & Smart ⚡',
-    lang: 'en-US',
+    id: 'openai-echo',
+    name: 'Tony (OpenAI Echo)',
+    engine: 'OpenAI Neural TTS',
+    badge: 'Conversational & Smart ⚡',
+    provider: 'openai',
+    voice: 'echo',
     gender: 'male',
-    desc: 'Crisp, fast, and energetic modern tech assistant tone.',
-    sampleText: 'Hey boss, data analyze ho gaya hai. Bataiye agla command kya hai?',
-    defaultPitch: 1.0,
-    defaultRate: 1.05,
+    desc: 'Smooth, resonant conversational male voice. Confident and great for tech chat.',
+    sampleText: 'Hey boss, data analyze ho gaya hai. Bataiye agla command kya execute karein?',
     icon: Zap,
     color: 'from-cyan-500 to-blue-600',
   },
   {
-    id: 'kabir-rj',
-    name: 'Kabir (Radio Jockey Hinglish)',
-    badge: 'Expressive Male 🎙️',
-    lang: 'hi-IN',
+    id: 'openai-alloy',
+    name: 'Alloy (OpenAI Official)',
+    engine: 'OpenAI Neural TTS',
+    badge: 'ChatGPT Standard 🚀',
+    provider: 'openai',
+    voice: 'alloy',
     gender: 'male',
-    desc: 'Dynamic, expressive, and conversational radio jockey style Hinglish voice.',
-    sampleText: 'Arrey bhai, welcome! Aaj kya naya toofani task automate karna hai?',
-    defaultPitch: 0.9,
-    defaultRate: 1.05,
+    desc: 'The classic balanced OpenAI voice. Clean, neutral, and highly intelligible.',
+    sampleText: 'Command received boss. All Turso database records are synchronized.',
+    icon: Cpu,
+    color: 'from-violet-500 to-purple-600',
+  },
+  {
+    id: 'openai-shimmer',
+    name: 'Aria (OpenAI Shimmer)',
+    engine: 'OpenAI Neural TTS',
+    badge: 'Bright & Crisp ✨',
+    provider: 'openai',
+    voice: 'shimmer',
+    gender: 'female',
+    desc: 'Bright, cheerful, and clear female assistant tone.',
+    sampleText: 'Voice recognition confirmed boss! Aapki identity verified ho gayi hai.',
+    icon: Sparkles,
+    color: 'from-pink-500 to-fuchsia-600',
+  },
+  {
+    id: 'polly-aditi',
+    name: 'Aditi (Indian Bilingual)',
+    engine: 'AWS Polly Neural',
+    badge: 'Professional Hindi/English 🇮🇳',
+    provider: 'aws-polly',
+    voice: 'Aditi',
+    lang: 'hi-IN',
+    gender: 'female',
+    desc: 'Polite and clear Indian bilingual voice. Perfect for professional assistant tasks.',
+    sampleText: 'Namaste boss! Aapka personal AI system 24/7 active hai.',
     icon: Radio,
     color: 'from-orange-500 to-amber-600',
-  },
-  {
-    id: 'friday-us',
-    name: 'Friday (Modern Female Hinglish)',
-    badge: 'Siri / Marvel 👩‍💻',
-    lang: 'en-US',
-    gender: 'female',
-    desc: 'Sharp, polite, and intelligent modern assistant voice.',
-    sampleText: 'Boss, security protocols active hain. Voice recognition confirmed your authorization.',
-    defaultPitch: 1.1,
-    defaultRate: 1.0,
-    icon: Sparkles,
-    color: 'from-purple-500 to-indigo-600',
-  },
-  {
-    id: 'cyber-titan',
-    name: 'Titan (Cybernetic Bass)',
-    badge: 'Sci-Fi Deep Bass 🌌',
-    lang: 'en-GB',
-    gender: 'male',
-    desc: 'Ultra deep sub-bass robotic voice. Imposing, robotic, and futuristic.',
-    sampleText: 'Access granted, boss. System activation complete.',
-    defaultPitch: 0.55,
-    defaultRate: 0.85,
-    icon: Shield,
-    color: 'from-red-600 to-rose-700',
   },
 ];
 
@@ -138,121 +154,152 @@ const HINGLISH_QUICK_PROMPTS = [
 ];
 
 export default function VoiceStudio() {
-  const [selectedVoiceId, setSelectedVoiceId] = useState<string>('jarvis-uk');
-  const [isPlayingId, setIsPlayingId] = useState<string | null>(null);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>('openai-onyx');
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
+  const [loadingPersonaId, setLoadingPersonaId] = useState<string | null>(null);
   const [customText, setCustomText] = useState<string>(
     'Haan boss, boliye kya madad karoon? Aapka AI assistant ready hai.'
   );
-  const [pitch, setPitch] = useState<number>(0.82);
-  const [rate, setRate] = useState<number>(0.95);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [puterReady, setPuterReady] = useState<boolean>(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Initialize Puter.js dynamically
   useEffect(() => {
     // Load saved voice preference
     const saved = localStorage.getItem('selected_ai_voice');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.id) {
-          setSelectedVoiceId(parsed.id);
-          if (parsed.pitch) setPitch(parsed.pitch);
-          if (parsed.rate) setRate(parsed.rate);
-        }
+        if (parsed.id) setSelectedVoiceId(parsed.id);
       } catch (e) {
         console.error(e);
       }
     }
+
+    // Check or load Puter.js
+    if (typeof window !== 'undefined') {
+      if ((window as any).puter) {
+        setPuterReady(true);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://js.puter.com/v2/';
+        script.async = true;
+        script.onload = () => {
+          setPuterReady(true);
+        };
+        script.onerror = () => {
+          console.error('Failed to load Puter.js');
+        };
+        document.head.appendChild(script);
+      }
+    }
   }, []);
 
-  const playVoice = (persona: VoicePersona, textToPlay?: string) => {
+  const playVoice = async (persona: VoicePersona, textToPlay?: string) => {
     stopPlayback();
     const text = textToPlay || persona.sampleText;
-    setIsPlayingId(persona.id);
+    setLoadingPersonaId(persona.id);
+    setIsLoadingAudio(true);
 
-    // 1. Try Browser Native SpeechSynthesis with precise pitch & rate
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = rate;
-      utterance.pitch = pitch;
+    try {
+      // 1. Check if puter is available
+      const puter = (typeof window !== 'undefined' && (window as any).puter) || null;
 
-      // Match voice by language and gender if available
-      const voices = window.speechSynthesis.getVoices();
-      const matchingVoice =
-        voices.find((v) => v.lang.toLowerCase().includes(persona.lang.toLowerCase())) ||
-        voices.find(
-          (v) =>
-            v.lang.startsWith(persona.lang.split('-')[0]) &&
-            (persona.gender === 'female'
-              ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira')
-              : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'))
-        ) ||
-        voices.find((v) => v.lang.startsWith('en'));
+      if (puter && puter.ai && puter.ai.txt2speech) {
+        const options: any = {
+          provider: persona.provider,
+          voice: persona.voice,
+        };
 
-      if (matchingVoice) {
-        utterance.voice = matchingVoice;
+        if (persona.provider === 'openai') {
+          options.model = 'tts-1';
+        } else if (persona.provider === 'aws-polly') {
+          options.engine = 'neural';
+          if (persona.lang) options.language = persona.lang;
+        }
+
+        const audio = await puter.ai.txt2speech(text, options);
+        setIsLoadingAudio(false);
+        setLoadingPersonaId(null);
+        setPlayingId(persona.id);
+        currentAudioRef.current = audio;
+
+        audio.onended = () => {
+          setPlayingId(null);
+          currentAudioRef.current = null;
+        };
+        audio.onerror = () => {
+          setPlayingId(null);
+          currentAudioRef.current = null;
+        };
+
+        audio.play().catch((e: any) => {
+          console.error('Audio play error:', e);
+          setPlayingId(null);
+        });
+      } else {
+        // Fallback to serverless API
+        playFallbackAudio(persona, text);
       }
-
-      utterance.onend = () => setIsPlayingId(null);
-      utterance.onerror = () => {
-        playApiAudio(persona, text);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    } else {
-      playApiAudio(persona, text);
+    } catch (err: any) {
+      console.error('TTS Generation error, falling back:', err);
+      playFallbackAudio(persona, text);
     }
   };
 
-  const playApiAudio = (persona: VoicePersona, text: string) => {
-    // Fallback to Serverless API Audio
-    const langParam = persona.lang === 'hi-IN' ? 'hi' : persona.lang === 'en-IN' ? 'en-IN' : persona.lang;
-    const url = `/api/tts?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(langParam)}`;
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+  const playFallbackAudio = (persona: VoicePersona, text: string) => {
+    const lang = persona.lang || (persona.gender === 'female' ? 'hi' : 'en-GB');
+    const url = `/api/tts?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(lang)}`;
     const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.playbackRate = rate;
-    audio.onended = () => setIsPlayingId(null);
-    audio.onerror = () => setIsPlayingId(null);
-    audio.play().catch(() => setIsPlayingId(null));
+    currentAudioRef.current = audio;
+    setIsLoadingAudio(false);
+    setLoadingPersonaId(null);
+    setPlayingId(persona.id);
+
+    audio.onended = () => {
+      setPlayingId(null);
+      currentAudioRef.current = null;
+    };
+    audio.onerror = () => {
+      setPlayingId(null);
+      currentAudioRef.current = null;
+    };
+    audio.play().catch(() => setPlayingId(null));
   };
 
   const stopPlayback = () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsPlayingId(null);
+    setPlayingId(null);
+    setIsLoadingAudio(false);
+    setLoadingPersonaId(null);
   };
 
   const handleSelectVoice = (persona: VoicePersona) => {
     setSelectedVoiceId(persona.id);
-    setPitch(persona.defaultPitch);
-    setRate(persona.defaultRate);
 
     const config = {
       id: persona.id,
       name: persona.name,
-      lang: persona.lang,
-      pitch: persona.defaultPitch,
-      rate: persona.defaultRate,
+      provider: persona.provider,
+      voice: persona.voice,
+      engine: persona.engine,
     };
     localStorage.setItem('selected_ai_voice', JSON.stringify(config));
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
 
-    // Audition confirmation phrase in Hinglish!
-    playVoice(persona, `Voice locked boss! Ab se main isi aawaz me Hinglish me reply dunga.`);
+    // Audition confirmation in the selected voice!
+    playVoice(persona, `Voice locked boss! Main ${persona.name} hoon, ab se isi voice me baat hogi.`);
   };
 
   const handleCustomPlay = () => {
-    const persona = VOICE_PERSONAS.find((p) => p.id === selectedVoiceId) || VOICE_PERSONAS[0];
+    const persona =
+      NEURAL_VOICE_PERSONAS.find((p) => p.id === selectedVoiceId) || NEURAL_VOICE_PERSONAS[0];
     playVoice(persona, customText);
   };
 
@@ -270,9 +317,11 @@ export default function VoiceStudio() {
           </Link>
           <div>
             <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              Hinglish Voice Studio 🔊
+              Neural AI Voice Studio 🔊
             </h1>
-            <p className="text-[11px] text-slate-400">Natural Hinglish me bolne wali AI aawazein</p>
+            <p className="text-[11px] text-slate-400">
+              OpenAI & AWS Polly Neural Voices • Zero API Key Required
+            </p>
           </div>
         </div>
 
@@ -290,10 +339,13 @@ export default function VoiceStudio() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              Live Hinglish Audition Box (Kuch bhi likhkar suniye)
+              Live Neural Audition (Kuch Bhi Likh Kar Suniye)
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
-              Selected: <strong className="text-cyan-400">{VOICE_PERSONAS.find((p) => p.id === selectedVoiceId)?.name}</strong>
+              Selected:{' '}
+              <strong className="text-cyan-400">
+                {NEURAL_VOICE_PERSONAS.find((p) => p.id === selectedVoiceId)?.name}
+              </strong>
             </span>
           </div>
 
@@ -302,14 +354,19 @@ export default function VoiceStudio() {
               type="text"
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
-              placeholder="Hinglish me kuch bhi type karein..."
+              placeholder="Hinglish ya Hindi me kuch bhi likhein..."
               className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-500 transition font-medium"
             />
             <button
-              onClick={isPlayingId === 'custom' ? stopPlayback : handleCustomPlay}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95 transition cursor-pointer"
+              onClick={playingId ? stopPlayback : handleCustomPlay}
+              disabled={isLoadingAudio}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
-              {isPlayingId ? (
+              {isLoadingAudio ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-black" /> Generating...
+                </>
+              ) : playingId ? (
                 <>
                   <Square className="w-4 h-4 fill-black" /> Stop
                 </>
@@ -322,7 +379,7 @@ export default function VoiceStudio() {
           </div>
 
           {/* Quick Hinglish Audition Chips */}
-          <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+          <div className="mt-3 flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] text-slate-500 flex items-center gap-1">
               <MessageSquare className="w-3 h-3" /> Quick:
             </span>
@@ -331,68 +388,37 @@ export default function VoiceStudio() {
                 key={idx}
                 onClick={() => {
                   setCustomText(prompt);
-                  const persona = VOICE_PERSONAS.find((p) => p.id === selectedVoiceId) || VOICE_PERSONAS[0];
+                  const persona =
+                    NEURAL_VOICE_PERSONAS.find((p) => p.id === selectedVoiceId) ||
+                    NEURAL_VOICE_PERSONAS[0];
                   playVoice(persona, prompt);
                 }}
-                className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 transition"
+                className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 transition cursor-pointer"
               >
-                &quot;{prompt.slice(0, 30)}...&quot;
+                &quot;{prompt.slice(0, 32)}...&quot;
               </button>
             ))}
-          </div>
-
-          {/* Voice Fine-Tuning Controls */}
-          <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-800/80">
-            <div>
-              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                <span className="flex items-center gap-1">
-                  <SlidersHorizontal className="w-3 h-3 text-cyan-400" /> Pitch (Bhaari / Teekha)
-                </span>
-                <span className="font-mono text-cyan-400 font-bold">{pitch.toFixed(2)}x</span>
-              </div>
-              <input
-                type="range"
-                min="0.5"
-                max="1.5"
-                step="0.05"
-                value={pitch}
-                onChange={(e) => setPitch(parseFloat(e.target.value))}
-                className="w-full accent-cyan-500 cursor-pointer h-1.5 bg-slate-950 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                <span className="flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-amber-400" /> Speed (Dheeme / Tez)
-                </span>
-                <span className="font-mono text-amber-400 font-bold">{rate.toFixed(2)}x</span>
-              </div>
-              <input
-                type="range"
-                min="0.7"
-                max="1.4"
-                step="0.05"
-                value={rate}
-                onChange={(e) => setRate(parseFloat(e.target.value))}
-                className="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-950 rounded-lg"
-              />
-            </div>
           </div>
         </section>
 
         {/* Voices Grid */}
         <section className="space-y-2.5">
-          <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider px-1 flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-emerald-400" />
-            Top Hinglish Voice Library ({VOICE_PERSONAS.length} Voices)
-          </h2>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-emerald-400" />
+              Real Neural Voices ({NEURAL_VOICE_PERSONAS.length})
+            </h2>
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+              No API Key Required ✅
+            </span>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {VOICE_PERSONAS.map((persona) => {
+            {NEURAL_VOICE_PERSONAS.map((persona) => {
               const Icon = persona.icon;
               const isSelected = selectedVoiceId === persona.id;
-              const isPlaying = isPlayingId === persona.id;
+              const isThisPlaying = playingId === persona.id;
+              const isThisLoading = loadingPersonaId === persona.id && isLoadingAudio;
 
               return (
                 <div
@@ -416,7 +442,14 @@ export default function VoiceStudio() {
                           <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                             {persona.name}
                           </h3>
-                          <span className="text-[10px] font-mono text-slate-400">{persona.badge}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/50 px-1.5 py-0.2 rounded border border-cyan-800/40">
+                              {persona.engine}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {persona.badge}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -438,27 +471,37 @@ export default function VoiceStudio() {
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60">
                     <button
-                      onClick={() => (isPlaying ? stopPlayback() : playVoice(persona))}
-                      className={`flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-                        isPlaying
+                      onClick={() => (isThisPlaying ? stopPlayback() : playVoice(persona))}
+                      disabled={isLoadingAudio && !isThisLoading}
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        isThisPlaying
                           ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          : isThisLoading
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                       }`}
                     >
-                      {isPlaying ? (
+                      {isThisLoading ? (
                         <>
-                          <Square className="w-3.5 h-3.5 fill-red-400" /> Stop
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                          <span>Generating...</span>
+                        </>
+                      ) : isThisPlaying ? (
+                        <>
+                          <Square className="w-3.5 h-3.5 fill-red-400" />
+                          <span>Stop</span>
                         </>
                       ) : (
                         <>
-                          <Play className="w-3.5 h-3.5 fill-slate-200" /> Sunein (Play)
+                          <Play className="w-3.5 h-3.5 fill-slate-200" />
+                          <span>Sunein (Play)</span>
                         </>
                       )}
                     </button>
 
                     <button
                       onClick={() => handleSelectVoice(persona)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
                         isSelected
                           ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
                           : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40'
