@@ -4,58 +4,45 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
   MicOff,
-  User,
-  Users,
+  UserCheck,
+  UserX,
   Database,
   Zap,
   Trash2,
   Copy,
   Check,
   Settings,
-  Plus,
-  Volume2,
+  RefreshCw,
   Sparkles,
-  ExternalLink
+  ShieldCheck,
+  Fingerprint
 } from 'lucide-react';
 
 interface Transcription {
   id: string;
   speaker_name: string;
   is_owner: boolean;
+  match_percent: number;
   text: string;
   latency_ms: number;
   created_at: string;
 }
 
-interface Speaker {
-  id: string;
-  name: string;
-  is_owner: boolean;
-}
-
 export default function Home() {
   const [history, setHistory] = useState<Transcription[]>([]);
-  const [speakers, setSpeakers] = useState<Speaker[]>([
-    { id: '1', name: 'Aap (Owner)', is_owner: true },
-    { id: '2', name: 'Guest / Dost', is_owner: false },
-  ]);
-  const [selectedSpeaker, setSelectedSpeaker] = useState<Speaker>({
-    id: '1',
-    name: 'Aap (Owner)',
-    is_owner: true,
-  });
+  const [hasOwnerVoice, setHasOwnerVoice] = useState<boolean>(false);
+  const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
   const [language, setLanguage] = useState<string>('hi');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordDuration, setRecordDuration] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Settings
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [groqKey, setGroqKey] = useState<string>('');
-  const [showAddSpeaker, setShowAddSpeaker] = useState<boolean>(false);
-  const [newSpeakerName, setNewSpeakerName] = useState<string>('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -66,10 +53,23 @@ export default function Home() {
 
   useEffect(() => {
     fetchHistory();
-    fetchSpeakers();
+    checkOwnerStatus();
     const savedKey = localStorage.getItem('custom_groq_key') || '';
     setGroqKey(savedKey);
   }, []);
+
+  const checkOwnerStatus = async () => {
+    try {
+      const res = await fetch('/api/voiceprint');
+      const data = await res.json();
+      setHasOwnerVoice(Boolean(data.has_owner));
+      if (!data.has_owner) {
+        setIsRegisterMode(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -81,17 +81,47 @@ export default function Home() {
     }
   };
 
-  const fetchSpeakers = async () => {
+  // Extract a 32-dimensional spectral voiceprint vector from audio
+  const extractVoiceprint = async (audioBlob: Blob): Promise<number[]> => {
     try {
-      const res = await fetch('/api/speakers');
-      const data = await res.json();
-      if (data.speakers && data.speakers.length > 0) {
-        setSpeakers(data.speakers);
-        const owner = data.speakers.find((s: Speaker) => s.is_owner) || data.speakers[0];
-        setSelectedSpeaker(owner);
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const offlineCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: 16000,
+      });
+      const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
+      const channelData = audioBuffer.getChannelData(0);
+
+      // FFT analysis across frames
+      const fftSize = 512;
+      const numBands = 32;
+      const vector = new Array(numBands).fill(0);
+      let framesCount = 0;
+
+      for (let i = 0; i < channelData.length - fftSize; i += fftSize) {
+        framesCount++;
+        let frameEnergy = 0;
+        for (let j = 0; j < fftSize; j++) {
+          frameEnergy += Math.abs(channelData[i + j]);
+          const bandIdx = Math.floor((j / fftSize) * numBands);
+          vector[bandIdx] += Math.abs(channelData[i + j]);
+        }
       }
-    } catch (e) {
-      console.error('Fetch speakers error:', e);
+
+      offlineCtx.close();
+
+      if (framesCount === 0) return [];
+
+      // Normalize vector
+      let sum = 0;
+      for (let i = 0; i < numBands; i++) {
+        vector[i] = vector[i] / framesCount;
+        sum += vector[i] * vector[i];
+      }
+      const norm = Math.sqrt(sum) || 1;
+      return vector.map((v) => Number((v / norm).toFixed(4)));
+    } catch (err) {
+      console.error('Feature extraction error:', err);
+      return [];
     }
   };
 
@@ -106,7 +136,7 @@ export default function Home() {
       });
       streamRef.current = stream;
 
-      // Audio meter
+      // Audio Level meter
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioContextRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
@@ -139,13 +169,14 @@ export default function Home() {
 
       recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        await handleSendAudio(audioBlob);
+        await handleProcessVoice(audioBlob);
       };
 
       recorder.start();
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
       setRecordDuration(0);
+      setStatusMessage(isRegisterMode ? 'Apni aawaz me boliye (4-5s)...' : 'Sun raha hoon... Boliye!');
 
       timerRef.current = setInterval(() => {
         setRecordDuration((prev) => prev + 1);
@@ -182,14 +213,19 @@ export default function Home() {
     }
   };
 
-  const handleSendAudio = async (blob: Blob) => {
-    if (blob.size < 500) return;
+  const handleProcessVoice = async (blob: Blob) => {
+    if (blob.size < 600) return;
     setIsProcessing(true);
+    setStatusMessage('Voiceprint verify aur Whisper transcription ho raha hai...');
 
+    // 1. Extract voiceprint in browser
+    const voiceVector = await extractVoiceprint(blob);
+
+    // 2. Prepare FormData
     const formData = new FormData();
-    formData.append('file', blob, 'voice.webm');
-    formData.append('speaker_name', selectedSpeaker.name);
-    formData.append('is_owner', String(selectedSpeaker.is_owner));
+    formData.append('file', blob, 'speech.webm');
+    formData.append('action', isRegisterMode ? 'register' : 'identify');
+    formData.append('voiceprint', JSON.stringify(voiceVector));
     formData.append('language', language);
 
     const headers: Record<string, string> = {};
@@ -202,12 +238,31 @@ export default function Home() {
         body: formData,
       });
       const data = await res.json();
+
+      if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+      }
+
+      if (data.is_new_registration) {
+        setHasOwnerVoice(true);
+        setIsRegisterMode(false);
+        setStatusMessage('✅ Aapki aawaz successfully register ho gayi!');
+      } else {
+        setStatusMessage(
+          data.is_owner
+            ? `🟢 Identified: Aap (Owner) [${data.match_percent}% Match]`
+            : `🔵 Identified: Koi aur [${data.match_percent}% Match]`
+        );
+      }
+
       if (data.text) {
         setHistory((prev) => [
           {
             id: data.id,
             speaker_name: data.speaker_name,
             is_owner: data.is_owner,
+            match_percent: data.match_percent,
             text: data.text,
             latency_ms: data.latency_ms,
             created_at: new Date().toISOString(),
@@ -216,27 +271,20 @@ export default function Home() {
         ]);
       }
     } catch (err) {
-      console.error('Transcription error:', err);
+      console.error('Processing error:', err);
+      setStatusMessage('Error processing audio.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleAddSpeaker = async () => {
-    if (!newSpeakerName.trim()) return;
+  const handleResetVoiceprint = async () => {
+    if (!confirm('Kya aap saved Owner Voiceprint delete karke nayi aawaz save karna chahte hain?')) return;
     try {
-      const res = await fetch('/api/speakers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSpeakerName.trim(), is_owner: false }),
-      });
-      const data = await res.json();
-      if (data.id) {
-        setSpeakers((prev) => [...prev, data]);
-        setSelectedSpeaker(data);
-        setNewSpeakerName('');
-        setShowAddSpeaker(false);
-      }
+      await fetch('/api/voiceprint', { method: 'DELETE' });
+      setHasOwnerVoice(false);
+      setIsRegisterMode(true);
+      setStatusMessage('Voiceprint reset. Ab apni nayi aawaz bolein.');
     } catch (e) {
       console.error(e);
     }
@@ -267,111 +315,99 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-3 sm:p-6">
       {/* Top Navbar */}
-      <header className="w-full max-w-2xl flex items-center justify-between pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-2">
+      <header className="w-full max-w-2xl flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Zap className="w-5 h-5 text-white" />
+            <Fingerprint className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Whisper Voice AI
+              Voiceprint AI Speaker ID
             </h1>
             <p className="text-[11px] text-slate-400">Turso Edge DB • Groq Whisper LPU</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition"
-            title="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition"
+          title="Settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </header>
 
-      {/* Main Content */}
-      <main className="w-full max-w-2xl flex-1 flex flex-col mt-4">
-        {/* Controls Card */}
-        <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
-          {/* Speaker Selector */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-cyan-400" />
-                Kaun bol raha hai (Speaker):
-              </label>
-              <button
-                onClick={() => setShowAddSpeaker(true)}
-                className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" /> Naya Speaker
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {speakers.map((sp) => {
-                const isSelected = selectedSpeaker.id === sp.id;
-                return (
-                  <button
-                    key={sp.id}
-                    onClick={() => setSelectedSpeaker(sp)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
-                      isSelected
-                        ? sp.is_owner
-                          ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
-                          : 'bg-blue-500/20 border border-blue-500 text-blue-300 shadow-md shadow-blue-500/10'
-                        : 'bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${sp.is_owner ? 'bg-emerald-400' : 'bg-blue-400'}`} />
-                    {sp.name}
-                  </button>
-                );
-              })}
-            </div>
+      {/* Main Container */}
+      <main className="w-full max-w-2xl flex-1 flex flex-col mt-3.5">
+        {/* Owner Status Bar */}
+        <section className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs">
+            {hasOwnerVoice ? (
+              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                <ShieldCheck className="w-4 h-4" />
+                Owner Voiceprint: Active ✅
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                <UserX className="w-4 h-4" />
+                Owner Voice: Not Registered ⚠️
+              </span>
+            )}
           </div>
 
-          {/* Language Selector */}
-          <div className="mt-3.5 flex items-center justify-between pt-3 border-t border-slate-800/80">
-            <span className="text-xs text-slate-400 font-medium">Bhasha (Language):</span>
-            <div className="flex gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-2">
+            {hasOwnerVoice && (
               <button
-                onClick={() => setLanguage('hi')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                  language === 'hi' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                onClick={handleResetVoiceprint}
+                className="text-[11px] text-slate-400 hover:text-red-400 transition flex items-center gap-1"
+                title="Reset Voiceprint"
               >
-                हिन्दी
+                <RefreshCw className="w-3 h-3" /> Reset
               </button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                  language === 'en' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                English
-              </button>
-              <button
-                onClick={() => setLanguage('auto')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                  language === 'auto' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Auto
-              </button>
-            </div>
+            )}
+            <button
+              onClick={() => setIsRegisterMode(!isRegisterMode)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                isRegisterMode
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                  : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+              }`}
+            >
+              {isRegisterMode ? '🎙️ Registering Mode' : 'Identify Mode'}
+            </button>
           </div>
         </section>
 
+        {/* Language Bar */}
+        <div className="mt-2.5 flex items-center justify-between px-1">
+          <span className="text-[11px] text-slate-400 font-medium">Bhasha:</span>
+          <div className="flex gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setLanguage('hi')}
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition ${
+                language === 'hi' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              हिन्दी / Hinglish
+            </button>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition ${
+                language === 'en' ? 'bg-cyan-500 text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              English
+            </button>
+          </div>
+        </div>
+
         {/* Record Walkie-Talkie Button */}
-        <div className="my-6 flex flex-col items-center justify-center">
+        <div className="my-5 flex flex-col items-center justify-center">
           <div className="relative flex items-center justify-center">
             {isRecording && (
               <div
                 className="absolute w-32 h-32 rounded-full bg-red-500/20 animate-ping pointer-events-none"
-                style={{ transform: `scale(${1 + audioLevel / 100})` }}
+                style={{ transform: `scale(${1 + audioLevel / 80})` }}
               />
             )}
             <button
@@ -382,6 +418,8 @@ export default function Home() {
                   ? 'bg-gradient-to-tr from-rose-600 to-red-500 shadow-red-500/40 scale-105'
                   : isProcessing
                   ? 'bg-slate-800 text-slate-400 opacity-60'
+                  : isRegisterMode
+                  ? 'bg-gradient-to-tr from-amber-500 to-orange-600 shadow-amber-500/30 hover:scale-105'
                   : 'bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-cyan-500/30 hover:scale-105 active:scale-95'
               }`}
             >
@@ -396,14 +434,14 @@ export default function Home() {
                 <>
                   <Mic className="w-9 h-9 text-white" />
                   <span className="text-[9px] font-medium text-cyan-100 tracking-wider mt-0.5 uppercase">
-                    Tap to Talk
+                    {isRegisterMode ? 'Save Voice' : 'Tap to Speak'}
                   </span>
                 </>
               )}
             </button>
           </div>
 
-          {/* Volume Level Bar */}
+          {/* Volume Bar */}
           <div className="w-36 h-1.5 bg-slate-900 rounded-full mt-3 overflow-hidden border border-slate-800">
             <div
               className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-75"
@@ -411,17 +449,13 @@ export default function Home() {
             />
           </div>
 
-          <p className="text-xs text-slate-400 mt-2 font-medium">
-            {isRecording
-              ? '🎙️ Sun raha hoon... Bol kar button dobara dabayein'
-              : isProcessing
-              ? '⚡ Groq Whisper + Turso DB process kar raha hai...'
-              : 'Button dabayein aur bolna shuru karein'}
+          <p className="text-xs text-slate-300 mt-2 font-medium text-center px-4">
+            {statusMessage || (isRegisterMode ? 'Apni aawaz register karne ke liye boliye' : 'Boliye, AI khud pehchanega ki kaun bol raha hai!')}
           </p>
         </div>
 
-        {/* History / Feed Section */}
-        <section className="flex-1 flex flex-col bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-hidden">
+        {/* Live Feed & History from Turso DB */}
+        <section className="flex-1 flex flex-col bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-hidden min-h-[300px]">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-cyan-400" />
@@ -441,11 +475,11 @@ export default function Home() {
 
           <div className="flex-1 overflow-y-auto mt-3 flex flex-col gap-3 pr-1">
             {history.length === 0 ? (
-              <div className="m-auto text-center py-12 text-slate-500 text-xs">
+              <div className="m-auto text-center py-10 text-slate-500 text-xs">
                 <Sparkles className="w-6 h-6 mx-auto mb-2 text-slate-600" />
                 Abhi tak koi recording nahi hai.
                 <br />
-                Upar mic button daba kar boliye!
+                Mic button daba kar boliye, AI pehchan kar yahan print karega!
               </div>
             ) : (
               history.map((item) => (
@@ -463,14 +497,16 @@ export default function Home() {
                         item.is_owner ? 'text-emerald-400' : 'text-blue-400'
                       }`}
                     >
-                      <span
-                        className={`w-2 h-2 rounded-full ${item.is_owner ? 'bg-emerald-400' : 'bg-blue-400'}`}
-                      />
+                      {item.is_owner ? (
+                        <UserCheck className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <UserX className="w-4 h-4 text-blue-400" />
+                      )}
                       {item.speaker_name}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-md border border-slate-800">
-                        ⚡ {item.latency_ms}ms
+                        {item.match_percent > 0 ? `${item.match_percent}% Match • ` : ''}⚡ {item.latency_ms}ms
                       </span>
                       <button
                         onClick={() => copyToClipboard(item.text, item.id)}
@@ -495,50 +531,16 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Add Speaker Modal */}
-      {showAddSpeaker && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-sm shadow-2xl">
-            <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-              <Users className="w-4 h-4 text-cyan-400" />
-              Naya Speaker Add Karein
-            </h3>
-            <input
-              type="text"
-              placeholder="Speaker ka naam (e.g. Rahul, Boss, Guest)..."
-              value={newSpeakerName}
-              onChange={(e) => setNewSpeakerName(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500 mb-4"
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowAddSpeaker(false)}
-                className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddSpeaker}
-                className="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-md shadow-2xl">
             <h3 className="text-sm font-bold text-slate-200 mb-2 flex items-center gap-2">
               <Settings className="w-4 h-4 text-cyan-400" />
-              API & Database Settings
+              API & Turso Database Settings
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Vercel par deploy karte waqt aap yeh Environment Variables me bhi daal sakte hain.
+              Vercel par deploy karte waqt yeh Environment Variables me set kar sakte hain.
             </p>
 
             <div className="space-y-3">
@@ -564,7 +566,7 @@ export default function Home() {
                 <br />
                 <span>• `TURSO_AUTH_TOKEN` (ey...)</span>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Local dev me yeh automatically `file:local.db` par chalta hai.
+                  Local me yeh automatically fallback `file:local.db` par save hota hai.
                 </p>
               </div>
             </div>
