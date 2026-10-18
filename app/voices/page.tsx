@@ -18,6 +18,7 @@ import {
   Shield,
   RefreshCw,
   SlidersHorizontal,
+  MessageSquare,
 } from 'lucide-react';
 
 interface VoicePersona {
@@ -37,38 +38,25 @@ interface VoicePersona {
 const VOICE_PERSONAS: VoicePersona[] = [
   {
     id: 'jarvis-uk',
-    name: 'Jarvis (British Deep)',
+    name: 'Jarvis (British Deep Hinglish)',
     badge: 'Iron Man Style 🤖',
     lang: 'en-GB',
     gender: 'male',
-    desc: 'Deep, calm, and sophisticated British butler tone. Best for serious assistants.',
-    sampleText: 'Good evening, boss. All primary systems are online and functioning at maximum capacity.',
+    desc: 'Deep, calm, and royal British butler tone speaking natural Hinglish. Best for Jarvis assistant.',
+    sampleText: 'Good evening boss, aapka saara system online hai. Boliye, aaj kya order hai?',
     defaultPitch: 0.82,
     defaultRate: 0.95,
     icon: Bot,
     color: 'from-amber-500 to-yellow-600',
   },
   {
-    id: 'tony-us',
-    name: 'Tony Stark (US Tech)',
-    badge: 'Fast & Smart ⚡',
-    lang: 'en-US',
-    gender: 'male',
-    desc: 'Crisp, fast, and energetic American tech assistant voice.',
-    sampleText: "Hey boss, I just finished analyzing the data. What's our next move?",
-    defaultPitch: 1.0,
-    defaultRate: 1.05,
-    icon: Zap,
-    color: 'from-cyan-500 to-blue-600',
-  },
-  {
     id: 'desi-techie',
-    name: 'Rohan (Desi Techie)',
-    badge: 'Indian Hinglish 🇮🇳',
+    name: 'Rohan (Desi Bro Hinglish)',
+    badge: 'Most Natural Hinglish 🇮🇳',
     lang: 'en-IN',
     gender: 'male',
-    desc: 'Natural Indian accent. Speaks Hinglish words cleanly with a friendly bro tone.',
-    sampleText: 'Haan bhai, boliye kya kaam hai? Aapka code aur database sab tayyar hai.',
+    desc: 'Natural Indian accent. Speaks casual Hinglish words cleanly with a friendly bhai tone.',
+    sampleText: 'Haan bhai, boliye kya scene hai? Aapka code aur database sab tayyar hai.',
     defaultPitch: 0.95,
     defaultRate: 1.0,
     icon: Radio,
@@ -76,25 +64,38 @@ const VOICE_PERSONAS: VoicePersona[] = [
   },
   {
     id: 'swara-hindi',
-    name: 'Pooja (Warm Hindi)',
+    name: 'Pooja (Friendly Female Hinglish)',
     badge: 'Sweet & Polite 🌸',
-    lang: 'hi-IN',
+    lang: 'en-IN',
     gender: 'female',
-    desc: 'Polite, sweet, and crystal-clear female voice for Hindi & Hinglish.',
-    sampleText: 'नमस्ते! मैं आपकी पर्सनल एआई असिस्टेंट हूँ। आज मैं आपकी क्या मदद कर सकती हूँ?',
+    desc: 'Sweet, polite, and crystal-clear female voice speaking natural conversational Hinglish.',
+    sampleText: 'Hello! Main aapki AI assistant hoon. Boliye, aaj main aapki kya help kar sakti hoon?',
     defaultPitch: 1.05,
     defaultRate: 0.95,
     icon: Heart,
     color: 'from-rose-500 to-pink-600',
   },
   {
+    id: 'tony-us',
+    name: 'Tony (Fast Tech Hinglish)',
+    badge: 'Fast & Smart ⚡',
+    lang: 'en-US',
+    gender: 'male',
+    desc: 'Crisp, fast, and energetic modern tech assistant tone.',
+    sampleText: 'Hey boss, data analyze ho gaya hai. Bataiye agla command kya hai?',
+    defaultPitch: 1.0,
+    defaultRate: 1.05,
+    icon: Zap,
+    color: 'from-cyan-500 to-blue-600',
+  },
+  {
     id: 'kabir-rj',
-    name: 'Kabir (Radio Jockey Hindi)',
+    name: 'Kabir (Radio Jockey Hinglish)',
     badge: 'Expressive Male 🎙️',
     lang: 'hi-IN',
     gender: 'male',
-    desc: 'Dynamic, expressive, and conversational radio jockey style Hindi voice.',
-    sampleText: 'अरे भाई, बहुत-बहुत स्वागत है आपका! बताइए आज क्या तूफानी करने का इरादा है?',
+    desc: 'Dynamic, expressive, and conversational radio jockey style Hinglish voice.',
+    sampleText: 'Arrey bhai, welcome! Aaj kya naya toofani task automate karna hai?',
     defaultPitch: 0.9,
     defaultRate: 1.05,
     icon: Radio,
@@ -102,12 +103,12 @@ const VOICE_PERSONAS: VoicePersona[] = [
   },
   {
     id: 'friday-us',
-    name: 'Friday (Modern Female)',
+    name: 'Friday (Modern Female Hinglish)',
     badge: 'Siri / Marvel 👩‍💻',
     lang: 'en-US',
     gender: 'female',
-    desc: 'Sharp, polite, and intelligent American assistant voice.',
-    sampleText: 'Boss, security protocols are active. Voice recognition confirmed your authorization.',
+    desc: 'Sharp, polite, and intelligent modern assistant voice.',
+    sampleText: 'Boss, security protocols active hain. Voice recognition confirmed your authorization.',
     defaultPitch: 1.1,
     defaultRate: 1.0,
     icon: Sparkles,
@@ -116,11 +117,11 @@ const VOICE_PERSONAS: VoicePersona[] = [
   {
     id: 'cyber-titan',
     name: 'Titan (Cybernetic Bass)',
-    badge: 'Sci-Fi Monster 🌌',
+    badge: 'Sci-Fi Deep Bass 🌌',
     lang: 'en-GB',
     gender: 'male',
-    desc: 'Ultra deep sub-bass robotic voice. Imposing and futuristic.',
-    sampleText: 'Core authorization accepted. Commencing orbital sequence.',
+    desc: 'Ultra deep sub-bass robotic voice. Imposing, robotic, and futuristic.',
+    sampleText: 'Access granted, boss. System activation complete.',
     defaultPitch: 0.55,
     defaultRate: 0.85,
     icon: Shield,
@@ -128,14 +129,22 @@ const VOICE_PERSONAS: VoicePersona[] = [
   },
 ];
 
+const HINGLISH_QUICK_PROMPTS = [
+  'Haan boss, boliye kya madad karoon? System ready hai.',
+  'Aapka voice match ho gaya hai, welcome back boss!',
+  'Bhai, aaj ka kya plan hai? Main tayyar hoon.',
+  'Mummy bol rahi thi isliye maine koi reply nahi diya.',
+  'Command executed successfully, sab done hai.',
+];
+
 export default function VoiceStudio() {
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('jarvis-uk');
   const [isPlayingId, setIsPlayingId] = useState<string | null>(null);
   const [customText, setCustomText] = useState<string>(
-    'Hello boss! Main aapka personal AI assistant hoon. Boliye, aaj kya order hai?'
+    'Haan boss, boliye kya madad karoon? Aapka AI assistant ready hai.'
   );
-  const [pitch, setPitch] = useState<number>(0.85);
-  const [rate, setRate] = useState<number>(1.0);
+  const [pitch, setPitch] = useState<number>(0.82);
+  const [rate, setRate] = useState<number>(0.95);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -170,13 +179,16 @@ export default function VoiceStudio() {
 
       // Match voice by language and gender if available
       const voices = window.speechSynthesis.getVoices();
-      const matchingVoice = voices.find(
-        (v) =>
-          v.lang.startsWith(persona.lang.split('-')[0]) &&
-          (persona.gender === 'female'
-            ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira')
-            : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'))
-      ) || voices.find((v) => v.lang.startsWith(persona.lang.split('-')[0]));
+      const matchingVoice =
+        voices.find((v) => v.lang.toLowerCase().includes(persona.lang.toLowerCase())) ||
+        voices.find(
+          (v) =>
+            v.lang.startsWith(persona.lang.split('-')[0]) &&
+            (persona.gender === 'female'
+              ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira')
+              : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'))
+        ) ||
+        voices.find((v) => v.lang.startsWith('en'));
 
       if (matchingVoice) {
         utterance.voice = matchingVoice;
@@ -184,7 +196,6 @@ export default function VoiceStudio() {
 
       utterance.onend = () => setIsPlayingId(null);
       utterance.onerror = () => {
-        // Fallback to Serverless API Audio
         playApiAudio(persona, text);
       };
 
@@ -195,7 +206,9 @@ export default function VoiceStudio() {
   };
 
   const playApiAudio = (persona: VoicePersona, text: string) => {
-    const url = `/api/tts?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(persona.lang)}`;
+    // Fallback to Serverless API Audio
+    const langParam = persona.lang === 'hi-IN' ? 'hi' : persona.lang === 'en-IN' ? 'en-IN' : persona.lang;
+    const url = `/api/tts?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(langParam)}`;
     if (audioRef.current) {
       audioRef.current.pause();
     }
@@ -234,8 +247,8 @@ export default function VoiceStudio() {
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
 
-    // Audition confirmation phrase
-    playVoice(persona, `Voice locked. ${persona.name} is now your active assistant.`);
+    // Audition confirmation phrase in Hinglish!
+    playVoice(persona, `Voice locked boss! Ab se main isi aawaz me Hinglish me reply dunga.`);
   };
 
   const handleCustomPlay = () => {
@@ -257,9 +270,9 @@ export default function VoiceStudio() {
           </Link>
           <div>
             <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              AI Voice Studio 🔊
+              Hinglish Voice Studio 🔊
             </h1>
-            <p className="text-[11px] text-slate-400">Apne AI ke liye best aawaz sunein aur select karein</p>
+            <p className="text-[11px] text-slate-400">Natural Hinglish me bolne wali AI aawazein</p>
           </div>
         </div>
 
@@ -277,7 +290,7 @@ export default function VoiceStudio() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              Live Audition Box (Kuch bhi likhkar suniye)
+              Live Hinglish Audition Box (Kuch bhi likhkar suniye)
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
               Selected: <strong className="text-cyan-400">{VOICE_PERSONAS.find((p) => p.id === selectedVoiceId)?.name}</strong>
@@ -289,7 +302,7 @@ export default function VoiceStudio() {
               type="text"
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
-              placeholder="Hindi, Hinglish ya English me kuch likhiye..."
+              placeholder="Hinglish me kuch bhi type karein..."
               className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-500 transition font-medium"
             />
             <button
@@ -306,6 +319,26 @@ export default function VoiceStudio() {
                 </>
               )}
             </button>
+          </div>
+
+          {/* Quick Hinglish Audition Chips */}
+          <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" /> Quick:
+            </span>
+            {HINGLISH_QUICK_PROMPTS.map((prompt, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setCustomText(prompt);
+                  const persona = VOICE_PERSONAS.find((p) => p.id === selectedVoiceId) || VOICE_PERSONAS[0];
+                  playVoice(persona, prompt);
+                }}
+                className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 transition"
+              >
+                &quot;{prompt.slice(0, 30)}...&quot;
+              </button>
+            ))}
           </div>
 
           {/* Voice Fine-Tuning Controls */}
@@ -352,7 +385,7 @@ export default function VoiceStudio() {
         <section className="space-y-2.5">
           <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider px-1 flex items-center gap-2">
             <Volume2 className="w-4 h-4 text-emerald-400" />
-            Top AI Voice Library ({VOICE_PERSONAS.length} Voices)
+            Top Hinglish Voice Library ({VOICE_PERSONAS.length} Voices)
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -396,8 +429,8 @@ export default function VoiceStudio() {
 
                     <p className="text-xs text-slate-400 mb-3 leading-relaxed">{persona.desc}</p>
 
-                    {/* Sample Text Preview */}
-                    <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 text-[11px] text-slate-300 italic mb-3">
+                    {/* Sample Hinglish Text Preview */}
+                    <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 text-[11px] text-emerald-300 font-medium italic mb-3">
                       &quot;{persona.sampleText}&quot;
                     </div>
                   </div>
