@@ -124,6 +124,8 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [playingItemId, setPlayingItemId] = useState<string | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Suggested registration prompts
   const registerPrompts = [
@@ -463,6 +465,40 @@ export default function Home() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const playAudioItem = (text: string, id: string) => {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
+    }
+    if (playingItemId === id) {
+      setPlayingItemId(null);
+      return;
+    }
+
+    let voiceKey = 'Brian';
+    try {
+      const saved = localStorage.getItem('selected_ai_voice');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.voiceKey) voiceKey = parsed.voiceKey;
+      }
+    } catch (e) {}
+
+    setPlayingItemId(id);
+    const audio = new Audio(`/api/tts?voice=${encodeURIComponent(voiceKey)}&text=${encodeURIComponent(text)}`);
+    ttsAudioRef.current = audio;
+
+    audio.onended = () => {
+      setPlayingItemId(null);
+      ttsAudioRef.current = null;
+    };
+    audio.onerror = () => {
+      setPlayingItemId(null);
+      ttsAudioRef.current = null;
+    };
+    audio.play().catch(() => setPlayingItemId(null));
+  };
+
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -732,6 +768,17 @@ export default function Home() {
                         {item.pitch && item.pitch > 0 ? `${item.pitch}Hz • ` : ''}
                         ⚡ {item.latency_ms}ms
                       </span>
+                      <button
+                        onClick={() => playAudioItem(item.text, item.id)}
+                        className={`transition p-1 ${
+                          playingItemId === item.id
+                            ? 'text-emerald-400 animate-pulse'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Listen with AI Voice"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => copyToClipboard(item.text, item.id)}
                         className="text-slate-400 hover:text-white transition p-1"
