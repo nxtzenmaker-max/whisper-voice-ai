@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import {
   Mic,
   MicOff,
@@ -17,6 +18,7 @@ import {
   Database,
   PlusCircle,
   CheckCircle2,
+  Volume2,
 } from 'lucide-react';
 
 interface Transcription {
@@ -483,13 +485,24 @@ export default function Home() {
           </div>
         </div>
 
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition"
-          title="Settings"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/voices"
+            className="p-1.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition flex items-center gap-1.5 text-xs font-bold shadow-sm"
+            title="AI Voice Studio"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Voice Studio 🔊</span>
+          </Link>
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
       {/* Main Container */}
