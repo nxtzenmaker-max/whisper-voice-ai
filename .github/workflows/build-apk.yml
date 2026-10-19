@@ -58,10 +58,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v1.5-apk
-          name: "ROX Voice Assistant Android APK (v1.5 - Loudspeaker Audio Fixed)"
+          tag_name: v1.6-apk
+          name: "ROX Voice Assistant Android APK (v1.6 - Pure Media & Zero Call Mode)"
           body: |
-            ### 🎙️ ROX Voice Assistant Android APK (v1.5)
+            ### 🎙️ ROX Voice Assistant Android APK (v1.6)
             
             ✅ **Features**:
             - 🤖 **Official Rebrand to ROX AI**: Your personalized Indian voice assistant.

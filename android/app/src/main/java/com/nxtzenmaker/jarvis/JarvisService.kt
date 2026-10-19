@@ -70,6 +70,7 @@ class JarvisService : Service() {
 
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
         audioManager?.mode = android.media.AudioManager.MODE_NORMAL
+        audioManager?.isSpeakerphoneOn = false
 
         acquireWakeLock()
         createNotificationChannel()
@@ -208,6 +209,10 @@ class JarvisService : Service() {
         isListeningLoopActive = true
 
         listeningJob = serviceScope.launch {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            audioManager?.mode = android.media.AudioManager.MODE_NORMAL
+            audioManager?.isSpeakerphoneOn = false
+
             val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
             val bufferSize = maxOf(minBufferSize, 4096)
 

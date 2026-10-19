@@ -35,6 +35,10 @@ class AudioRecorder(private val context: Context) {
         val bufferSize = maxOf(minBufferSize, 4096)
 
         try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            audioManager?.mode = android.media.AudioManager.MODE_NORMAL
+            audioManager?.isSpeakerphoneOn = false
+
             audioRecord = AudioRecord(
                 MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 sampleRate,

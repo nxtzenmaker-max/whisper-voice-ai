@@ -73,6 +73,10 @@ class MainActivity : AppCompatActivity() {
         audioPlayer = AudioPlayer(this)
         apiClient = ApiClient("https://whisper-voice-ai.vercel.app")
 
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+        audioManager?.mode = android.media.AudioManager.MODE_NORMAL
+        audioManager?.isSpeakerphoneOn = false
+
         setupViews()
         checkAndRequestPermissions()
         checkBackendHealth()
