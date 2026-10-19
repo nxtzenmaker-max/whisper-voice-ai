@@ -41,8 +41,8 @@ const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
     engine: 'Polly Neural (Desi Male AI)',
     badge: 'Desi Tony Stark 🇮🇳 (Male)',
     gender: 'male',
-    desc: 'Deep, confident Indian male tech voice. Speaks 100% authentic, crystal-clear Hinglish and Hindi!',
-    sampleText: 'Haan boss, boliye kya madad karoon? Aapka AI assistant ready hai.',
+    desc: 'Deep, confident Indian male tech voice. Speaks 100% authentic, crystal-clear Hindi and Hinglish!',
+    sampleText: 'हाँ बॉस, बोलिए क्या मदद करूँ? आपका AI असिस्टेंट बिल्कुल तैयार है।',
     icon: Zap,
     color: 'from-amber-500 to-orange-600',
   },
@@ -54,7 +54,7 @@ const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
     badge: '100% Native Hinglish 🇮🇳 (Female)',
     gender: 'female',
     desc: 'Natural Indian bilingual female voice. Clean, polite, and fluent in Hindi and Hinglish.',
-    sampleText: 'Aapka voice match ho gaya hai, welcome back boss!',
+    sampleText: 'नमस्ते बॉस! आपकी आवाज़ मैच हो गई है, स्वागत है!',
     icon: Radio,
     color: 'from-emerald-500 to-teal-600',
   },
@@ -144,6 +144,14 @@ const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
   },
 ];
 
+const PURE_HINDI_QUICK_PROMPTS = [
+  'हाँ बॉस, बोलिए क्या मदद करूँ? आपका AI असिस्टेंट बिल्कुल तैयार है।',
+  'आपकी आवाज़ की पहचान हो चुकी है। स्वागत है बॉस!',
+  'आज का क्या कार्य है? मैं पूरी तरह तैयार हूँ।',
+  'कमांड सफलतापूर्वक पूरा हो गया है, सब सुरक्षित है।',
+  'मम्मी की आवाज़ पहचान ली गई है, इसलिए मैंने कोई उत्तर नहीं दिया।',
+];
+
 const HINGLISH_QUICK_PROMPTS = [
   'Haan boss, boliye kya madad karoon? System ready hai.',
   'Aapka voice match ho gaya hai, welcome back boss!',
@@ -158,7 +166,7 @@ export default function VoiceStudio() {
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
   const [loadingPersonaKey, setLoadingPersonaKey] = useState<string | null>(null);
   const [customText, setCustomText] = useState<string>(
-    'Haan boss, boliye kya madad karoon? Aapka AI assistant ready hai.'
+    'हाँ बॉस, बोलिए क्या मदद करूँ? आपका AI असिस्टेंट बिल्कुल तैयार है। आपकी हर आज्ञा का पालन होगा।'
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -238,7 +246,11 @@ export default function VoiceStudio() {
     setTimeout(() => setSavedSuccess(false), 2500);
 
     // Audition confirmation in the selected voice!
-    playVoice(persona, `Voice locked boss! Main ${persona.name} hoon, ab se isi voice me baat hogi.`);
+    const isDesi = persona.voiceKey === 'Kabir' || persona.voiceKey === 'Aditi';
+    const confirmMsg = isDesi
+      ? 'आवाज़ सेट हो गई है बॉस! अब से इसी आवाज़ में बात होगी।'
+      : `Voice locked boss! All systems operational in ${persona.name} voice.`;
+    playVoice(persona, confirmMsg);
   };
 
   const handleCustomPlay = () => {
@@ -323,26 +335,51 @@ export default function VoiceStudio() {
             </button>
           </div>
 
-          {/* Quick Hinglish Audition Chips */}
-          <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] text-slate-500 flex items-center gap-1">
-              <MessageSquare className="w-3 h-3" /> Quick:
-            </span>
-            {HINGLISH_QUICK_PROMPTS.map((prompt, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setCustomText(prompt);
-                  const persona =
-                    NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey) ||
-                    NEURAL_VOICE_PERSONAS[0];
-                  playVoice(persona, prompt);
-                }}
-                className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 transition cursor-pointer"
-              >
-                &quot;{prompt.slice(0, 32)}...&quot;
-              </button>
-            ))}
+          {/* Quick Audition Chips */}
+          <div className="mt-3 space-y-2">
+            {/* Pure Hindi Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                🇮🇳 शुद्ध हिन्दी:
+              </span>
+              {PURE_HINDI_QUICK_PROMPTS.map((prompt, idx) => (
+                <button
+                  key={`hi-${idx}`}
+                  onClick={() => {
+                    setCustomText(prompt);
+                    const persona =
+                      NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey) ||
+                      NEURAL_VOICE_PERSONAS[0];
+                    playVoice(persona, prompt);
+                  }}
+                  className="text-[10px] bg-slate-950 hover:bg-slate-800 text-amber-200/90 hover:text-white px-2 py-1 rounded-lg border border-amber-500/20 hover:border-amber-500/40 transition cursor-pointer"
+                >
+                  &quot;{prompt.slice(0, 26)}...&quot;
+                </button>
+              ))}
+            </div>
+
+            {/* Hinglish Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                <MessageSquare className="w-3 h-3" /> Hinglish:
+              </span>
+              {HINGLISH_QUICK_PROMPTS.map((prompt, idx) => (
+                <button
+                  key={`hing-${idx}`}
+                  onClick={() => {
+                    setCustomText(prompt);
+                    const persona =
+                      NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey) ||
+                      NEURAL_VOICE_PERSONAS[0];
+                    playVoice(persona, prompt);
+                  }}
+                  className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 transition cursor-pointer"
+                >
+                  &quot;{prompt.slice(0, 26)}...&quot;
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
