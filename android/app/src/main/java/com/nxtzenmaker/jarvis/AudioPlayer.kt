@@ -28,17 +28,17 @@ class AudioPlayer {
                 )
                 setDataSource(url)
                 setOnPreparedListener { mp ->
-                    isPlaying = true
+                    this@AudioPlayer.isPlaying = true
                     onStart?.invoke()
                     mp.start()
                 }
                 setOnCompletionListener {
-                    isPlaying = false
+                    this@AudioPlayer.isPlaying = false
                     releasePlayer()
                     onComplete?.invoke()
                 }
                 setOnErrorListener { _, what, extra ->
-                    isPlaying = false
+                    this@AudioPlayer.isPlaying = false
                     releasePlayer()
                     onError?.invoke("Audio error: what=$what extra=$extra")
                     true

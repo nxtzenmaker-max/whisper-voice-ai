@@ -172,14 +172,14 @@ object VoiceFeatureExtractor {
                     val weight = if (k < center) (k - left).toFloat() / centerDiff else (right - k).toFloat() / rightDiff
                     bandEnergy += mag * weight
                 }
-                melEnergies[m] += bandEnergy
+                melEnergies[m] = melEnergies[m] + bandEnergy
             }
             start += N / 2
         }
 
         if (framesCount > 0) {
             for (m in 0 until numMelBands) {
-                melEnergies[m] /= framesCount
+                melEnergies[m] = melEnergies[m] / framesCount.toFloat()
             }
         }
 
