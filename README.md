@@ -58,6 +58,22 @@ Deployable to **Vercel** with zero-configuration! 🚀
 
 - **Framework**: [Next.js 16 (App Router)](https://nextjs.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Voice AI**: Groq Whisper Large V3 Turbo
+- **Database**: Turso SQLite (LibSQL)
+- **TTS**: Microsoft Edge-TTS (`en-IN-PrabhatNeural` at +20% speed)
+- **Mobile Client**: Native Android Kotlin app with biometrics & foreground service
+
+---
+
+## 📱 Android Jarvis Voice Assistant (APK)
+
+The repository includes a native Android client in `android/` equipped with:
+- **Biometric Voiceprint Extraction**: YIN fundamental pitch (F0) + 20-band Mel-frequency filterbank calculated locally on device.
+- **Strict Silent Gatekeeper**:
+  - **Owner (`Aap`)**: Replies with **Prabhat (+20% speed)** audio stream.
+  - **Stranger / Mummy / Friends**: 100% **SILENT** (security gate blocks unauthorized voices).
+- **Automated CI/CD**: Every push automatically builds `Jarvis-Voice-Assistant.apk` via GitHub Actions and publishes it to GitHub Releases & Artifacts.
+
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Speech AI**: [Groq Whisper Large V3 Turbo](https://console.groq.com/)
 - **Database**: [Turso SQLite Edge](https://turso.tech/) (`@libsql/client`)

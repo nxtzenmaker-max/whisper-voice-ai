@@ -41,3 +41,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Android build outputs
+.gradle/
+build/
+android/.gradle/
+android/build/
+android/app/build/
+*.apk
+*.aab
+local.properties
+

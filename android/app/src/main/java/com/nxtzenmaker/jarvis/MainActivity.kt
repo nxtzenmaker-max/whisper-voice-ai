@@ -1,0 +1,256 @@
+package com.nxtzenmaker.jarvis
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.os.Build
+import android.os.Bundle
+import android.view.View
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.nxtzenmaker.jarvis.databinding.ActivityMainBinding
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var audioRecorder: AudioRecorder
+    private lateinit var audioPlayer: AudioPlayer
+    private lateinit var apiClient: ApiClient
+
+    private var durationJob: Job? = null
+    private var recordDurationSeconds = 0
+
+    // Permission launcher
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val recordAudioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
+        if (recordAudioGranted) {
+            JarvisService.startService(this)
+            binding.tvSpeakerStatus.text = "Permissions granted. Ready!"
+        } else {
+            Toast.makeText(this, "Microphone permission is required for voice assistant", Toast.LENGTH_LONG).show()
+            binding.tvSpeakerStatus.text = "Mic permission denied ❌"
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        audioRecorder = AudioRecorder(this)
+        audioPlayer = AudioPlayer()
+        apiClient = ApiClient("https://whisper-voice-ai.vercel.app")
+
+        setupViews()
+        checkAndRequestPermissions()
+        checkBackendHealth()
+    }
+
+    private fun setupViews() {
+        binding.tvBackendUrl.text = apiClient.baseUrl.removePrefix("https://")
+
+        binding.switchRegister.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.tvModeBadge.text = "ENROLL MODE"
+                binding.tvModeBadge.setTextColor(ContextCompat.getColor(this, R.color.emerald_400))
+                binding.tvSpeakerStatus.text = "Enroll Mode: Speak to save owner voice sample"
+            } else {
+                binding.tvModeBadge.text = "IDENTIFY"
+                binding.tvModeBadge.setTextColor(ContextCompat.getColor(this, R.color.cyan_400))
+                binding.tvSpeakerStatus.text = "Identify Mode: Only Owner will trigger reply"
+            }
+        }
+
+        binding.btnMic.setOnClickListener {
+            if (audioRecorder.isCurrentlyRecording()) {
+                stopListeningAndVerify()
+            } else {
+                startListening()
+            }
+        }
+    }
+
+    private fun checkAndRequestPermissions() {
+        val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val missing = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missing.isNotEmpty()) {
+            permissionLauncher.launch(missing.toTypedArray())
+        } else {
+            JarvisService.startService(this)
+        }
+    }
+
+    private fun checkBackendHealth() {
+        lifecycleScope.launch {
+            val ok = apiClient.checkHealth()
+            if (ok) {
+                binding.tvStatusSub.text = "● Connected to Vercel Backend"
+                binding.tvStatusSub.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.emerald_400))
+            } else {
+                binding.tvStatusSub.text = "○ Backend connecting..."
+                binding.tvStatusSub.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
+            }
+        }
+    }
+
+    private fun startListening() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            checkAndRequestPermissions()
+            return
+        }
+
+        audioPlayer.stop()
+
+        val started = audioRecorder.startRecording { _ ->
+            // Amplitude visualizer callback if needed
+        }
+
+        if (started) {
+            binding.btnMic.setImageResource(R.drawable.ic_stop)
+            binding.btnMic.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.red_500))
+            binding.tvMicStatus.text = "Listening... Tap to Stop"
+            binding.tvDuration.visibility = View.VISIBLE
+            binding.tvDuration.text = "00:00"
+
+            recordDurationSeconds = 0
+            durationJob?.cancel()
+            durationJob = lifecycleScope.launch {
+                while (isActive) {
+                    delay(1000)
+                    recordDurationSeconds++
+                    val mins = recordDurationSeconds / 60
+                    val secs = recordDurationSeconds % 60
+                    binding.tvDuration.text = String.format("%02d:%02d", mins, secs)
+                }
+            }
+        } else {
+            Toast.makeText(this, "Could not start audio recording", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun stopListeningAndVerify() {
+        durationJob?.cancel()
+        durationJob = null
+
+        binding.btnMic.setImageResource(R.drawable.ic_mic)
+        binding.btnMic.backgroundTintList = null
+        binding.tvMicStatus.text = "Verifying..."
+        binding.tvDuration.visibility = View.INVISIBLE
+
+        binding.tvSpeakerStatus.text = "Analyzing Voice Biometrics & Whisper AI..."
+        binding.tvBiometricDetail.text = "Extracting YIN Pitch + 20-band Mel Filterbank..."
+
+        lifecycleScope.launch {
+            val recResult = audioRecorder.stopRecording()
+            if (recResult == null || recResult.durationMs < 400) {
+                binding.tvSpeakerStatus.text = "Audio too short. Please try again."
+                binding.tvMicStatus.text = "Tap to Speak"
+                return@launch
+            }
+
+            val isRegister = binding.switchRegister.isChecked
+            val action = if (isRegister) "register" else "identify"
+
+            val res = apiClient.transcribeAndVerify(
+                wavFile = recResult.wavFile,
+                voiceprintJson = recResult.features.vectorJson,
+                pitch = recResult.features.pitch,
+                action = action,
+                language = "hinglish"
+            )
+
+            recResult.wavFile.delete() // Clean up temp WAV
+
+            if (!res.success) {
+                binding.tvSpeakerStatus.text = "Verification Error"
+                binding.tvBiometricDetail.text = res.errorMessage ?: "Unknown error"
+                binding.tvMicStatus.text = "Tap to Speak"
+                return@launch
+            }
+
+            // Update Transcribed Speech
+            binding.tvYouSpoke.text = if (res.text.isNotBlank()) "\"${res.text}\"" else "[Silence / Unrecognized]"
+
+            // Update Biometric UI
+            val matchInt = res.matchPercent.toInt().coerceIn(0, 100)
+            binding.tvMatchPercent.text = "${res.matchPercent}%"
+            binding.pbMatch.progress = matchInt
+
+            if (res.isOwner) {
+                // OWNER VERIFIED!
+                val emeraldColor = ContextCompat.getColor(this@MainActivity, R.color.emerald_400)
+                binding.tvSpeakerStatus.text = "${res.speakerName} ✅"
+                binding.tvSpeakerStatus.setTextColor(emeraldColor)
+                binding.tvMatchPercent.setTextColor(emeraldColor)
+                binding.pbMatch.progressTintList = ColorStateList.valueOf(emeraldColor)
+
+                val pitchInfo = if (res.pitch > 0) "Pitch: ${res.pitch}Hz • " else ""
+                binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Owner identity confirmed." }}"
+
+                // Generate acknowledgment reply text (No LLM, fixed test reply as requested)
+                val replyText = if (res.isNewRegistration) {
+                    "Sample save ho gaya boss. Ab Jarvis aapko pehchan lega."
+                } else {
+                    "Haan boss, aapki aawaz verify ho gayi hai. System all green hai."
+                }
+
+                binding.tvJarvisReply.text = "\"$replyText\""
+                binding.tvStatusSub.text = "Prabhat (+20% speed) speaking..."
+
+                // Play Prabhat TTS audio
+                val ttsUrl = apiClient.getTtsAudioUrl(replyText)
+                audioPlayer.playUrl(
+                    url = ttsUrl,
+                    onStart = {
+                        binding.tvMicStatus.text = "Jarvis Speaking..."
+                    },
+                    onComplete = {
+                        binding.tvMicStatus.text = "Tap to Speak"
+                        binding.tvStatusSub.text = "● Reply completed"
+                    },
+                    onError = { err ->
+                        binding.tvMicStatus.text = "Tap to Speak"
+                        binding.tvStatusSub.text = "TTS playback error: $err"
+                    }
+                )
+            } else {
+                // NOT OWNER! STRICT SECURITY GATE ACTIVATION: SILENT!
+                val redColor = ContextCompat.getColor(this@MainActivity, R.color.red_400)
+                binding.tvSpeakerStatus.text = "${res.speakerName} ❌"
+                binding.tvSpeakerStatus.setTextColor(redColor)
+                binding.tvMatchPercent.setTextColor(redColor)
+                binding.pbMatch.progressTintList = ColorStateList.valueOf(redColor)
+
+                val pitchInfo = if (res.pitch > 0) "Pitch: ${res.pitch}Hz • " else ""
+                binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Voice mismatch." }} • Access Denied! (STRANGER)"
+
+                // MUTED! No audio played!
+                binding.tvJarvisReply.text = "🔇 [MUTED] Security Gate: Speaker is NOT the owner. Audio output blocked."
+                binding.tvStatusSub.text = "Security Gate Active • Zero Audio Response"
+                binding.tvMicStatus.text = "Tap to Speak"
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        durationJob?.cancel()
+        audioPlayer.stop()
+    }
+}
