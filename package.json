@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@bestcodes/edge-tts": "^3.0.1",
     "@libsql/client": "^0.18.0",
     "groq-sdk": "^1.6.0",
     "lucide-react": "^1.59.0",
     "next": "16.4.2",
+    "node-edge-tts": "^1.2.11",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

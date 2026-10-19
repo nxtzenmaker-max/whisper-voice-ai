@@ -35,26 +35,26 @@ interface VoicePersona {
 
 const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
   {
-    id: 'brian-jarvis',
-    name: 'Jarvis (British Deep Male)',
-    voiceKey: 'Brian',
-    engine: 'Amazon Polly Neural (Brian)',
-    badge: 'Iron Man Style 🤖',
+    id: 'kabir-desi-male',
+    name: 'Kabir (Desi Tech Male)',
+    voiceKey: 'Kabir',
+    engine: 'Polly Neural (Desi Male AI)',
+    badge: 'Desi Tony Stark 🇮🇳 (Male)',
     gender: 'male',
-    desc: 'The iconic deep British butler voice. Calm, commanding, and royal.',
-    sampleText: 'Good evening boss, all systems are online and operational. Awaiting your command.',
-    icon: Bot,
-    color: 'from-amber-500 to-yellow-600',
+    desc: 'Deep, confident Indian male tech voice. Speaks 100% authentic, crystal-clear Hinglish and Hindi!',
+    sampleText: 'Haan boss, boliye kya madad karoon? Aapka AI assistant ready hai.',
+    icon: Zap,
+    color: 'from-amber-500 to-orange-600',
   },
   {
     id: 'aditi-hindi',
-    name: 'Aditi (Indian Hinglish / Hindi)',
+    name: 'Aditi (Desi AI Female)',
     voiceKey: 'Aditi',
     engine: 'Amazon Polly Indian (Aditi)',
-    badge: '100% Desi Hinglish 🇮🇳',
+    badge: '100% Native Hinglish 🇮🇳 (Female)',
     gender: 'female',
-    desc: 'Natural Indian bilingual voice. Speaks Hinglish, Hindi, and English with clean pronunciation.',
-    sampleText: 'Haan boss, boliye kya madad karoon? Aapka AI assistant ready hai.',
+    desc: 'Natural Indian bilingual female voice. Clean, polite, and fluent in Hindi and Hinglish.',
+    sampleText: 'Aapka voice match ho gaya hai, welcome back boss!',
     icon: Radio,
     color: 'from-emerald-500 to-teal-600',
   },
@@ -63,12 +63,24 @@ const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
     name: 'Tony (US Tech Male)',
     voiceKey: 'Matthew',
     engine: 'Amazon Polly Neural (Matthew)',
-    badge: 'Fast & Confident ⚡',
+    badge: 'US English ⚡ (American)',
     gender: 'male',
-    desc: 'Crisp, fast, and modern American tech assistant tone.',
+    desc: 'Crisp, fast American tech tone. Best for English conversations.',
     sampleText: 'Hey boss, data analyze ho gaya hai. What is our next move?',
-    icon: Zap,
+    icon: Bot,
     color: 'from-cyan-500 to-blue-600',
+  },
+  {
+    id: 'brian-jarvis',
+    name: 'Jarvis (British Deep Male)',
+    voiceKey: 'Brian',
+    engine: 'Amazon Polly Neural (Brian)',
+    badge: 'Iron Man Jarvis 🤖 (UK Male)',
+    gender: 'male',
+    desc: 'The iconic deep British butler voice. Best for English commands.',
+    sampleText: 'Good evening boss, all systems are online and operational. Awaiting your command.',
+    icon: Shield,
+    color: 'from-purple-500 to-indigo-600',
   },
   {
     id: 'joanna-friday',
@@ -141,7 +153,7 @@ const HINGLISH_QUICK_PROMPTS = [
 ];
 
 export default function VoiceStudio() {
-  const [selectedVoiceKey, setSelectedVoiceKey] = useState<string>('Brian');
+  const [selectedVoiceKey, setSelectedVoiceKey] = useState<string>('Kabir');
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
   const [loadingPersonaKey, setLoadingPersonaKey] = useState<string | null>(null);

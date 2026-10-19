@@ -475,7 +475,7 @@ export default function Home() {
       return;
     }
 
-    let voiceKey = 'Brian';
+    let voiceKey = 'Kabir';
     try {
       const saved = localStorage.getItem('selected_ai_voice');
       if (saved) {

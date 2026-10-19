@@ -60,18 +60,71 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const rawText = url.searchParams.get('text') || 'Hello boss, all systems online.';
-    const voice = url.searchParams.get('voice') || 'Brian';
+    const voice = url.searchParams.get('voice') || 'Kabir';
 
-    // If English-only voice (Matthew/Tony, Brian/Jarvis, Joey, Russell) is selected,
-    // adapt Roman Hinglish phonetically so American/British models don't butcher Hindi words
-    const isEnglishOnlyVoice = voice === 'Matthew' || voice === 'Brian' || voice === 'Joey' || voice === 'Russell';
-    const text = isEnglishOnlyVoice ? phonetizeForEnglishVoice(rawText) : rawText;
+    let textToSynthesize = rawText;
+    let pollyLang = voice;
 
-    // 1. Try Amazon Polly neural speech endpoint (via server-side proxy)
+    // 1. Indian Bilingual Voices (Kabir - Desi Male, Aditi - Desi Female)
+    // For 100% natural, authentic Hindi/Hinglish without accent distortion,
+    // convert Roman Hinglish to Hindi Devanagari script via fast Groq LLM
+    if (voice === 'Kabir' || voice === 'Aditi') {
+      pollyLang = 'Aditi';
+
+      // If text contains Roman letters, check if it needs conversion to Devanagari
+      if (/[a-zA-Z]/.test(rawText)) {
+        try {
+          const groqKey = process.env.GROQ_API_KEY;
+          if (groqKey) {
+            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${groqKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'qwen/qwen3.8-27b',
+                messages: [
+                  {
+                    role: 'system',
+                    content:
+                      'If the input contains conversational Roman Hinglish or Hindi words, convert it into natural Hindi Devanagari script for speech synthesis. Keep pure English sentences/words (boss, AI, system, ready, status) in English or standard Devanagari. Output ONLY the converted text, no explanation.',
+                  },
+                  { role: 'user', content: rawText },
+                ],
+                temperature: 0.0,
+                max_tokens: 300,
+              }),
+            });
+            const groqData = await groqRes.json();
+            const converted = groqData.choices?.[0]?.message?.content?.trim();
+            if (converted && converted.length > 0) {
+              textToSynthesize = converted;
+            }
+          }
+        } catch (convErr) {
+          console.warn('Groq Hinglish to Devanagari conversion error:', convErr);
+        }
+      }
+
+      // Kabir Persona: Masculine tech tone via SSML prosody pitch reduction
+      if (voice === 'Kabir') {
+        textToSynthesize = `<prosody pitch="-24%" rate="103%">${textToSynthesize}</prosody>`;
+      }
+    } else {
+      // English-only voices (Matthew/Tony, Brian/Jarvis, Joey, Russell)
+      const isEnglishOnlyVoice =
+        voice === 'Matthew' || voice === 'Brian' || voice === 'Joey' || voice === 'Russell';
+      textToSynthesize = isEnglishOnlyVoice
+        ? phonetizeForEnglishVoice(rawText)
+        : rawText;
+    }
+
+    // 2. Try Amazon Polly neural speech endpoint (via server-side proxy)
     try {
       const formData = new URLSearchParams();
-      formData.append('msg', text.slice(0, 300));
-      formData.append('lang', voice);
+      formData.append('msg', textToSynthesize.slice(0, 400));
+      formData.append('lang', pollyLang);
       formData.append('source', 'ttsmp3');
 
       const res = await fetch('https://ttsmp3.com/makemp3_new.php', {
@@ -103,9 +156,9 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. High-speed Fallback to Google TTS
-    const lang = voice === 'Aditi' || voice === 'Raveena' ? 'hi' : 'en-GB';
+    const lang = voice === 'Aditi' || voice === 'Kabir' || voice === 'Raveena' ? 'hi' : 'en-GB';
     const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(
-      text.slice(0, 200)
+      textToSynthesize.replace(/<[^>]*>/g, '').slice(0, 200)
     )}`;
 
     const fallbackRes = await fetch(fallbackUrl, {
