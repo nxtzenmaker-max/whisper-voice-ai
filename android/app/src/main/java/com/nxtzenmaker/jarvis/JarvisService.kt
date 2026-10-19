@@ -65,7 +65,7 @@ class JarvisService : Service() {
     override fun onCreate() {
         super.onCreate()
         isServiceRunning = true
-        audioPlayer = AudioPlayer()
+        audioPlayer = AudioPlayer(this)
         apiClient = ApiClient("https://whisper-voice-ai.vercel.app")
 
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
@@ -174,6 +174,34 @@ class JarvisService : Service() {
         manager.notify(NOTIFICATION_ID, notification)
     }
 
+    @Volatile
+    private var isRecordingPaused = false
+
+    private fun pauseRecordingForSpeech() {
+        isRecordingPaused = true
+        try {
+            if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                audioRecord?.stop()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun resumeRecordingAfterSpeech() {
+        try {
+            if (audioRecord?.state == AudioRecord.STATE_INITIALIZED &&
+                audioRecord?.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                audioRecord?.startRecording()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isRecordingPaused = false
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun startContinuousListening() {
         if (isListeningLoopActive) return
@@ -217,8 +245,8 @@ class JarvisService : Service() {
                 val minSpeechFrames = 12      // ~0.76s minimum utterance
 
                 while (isActive && isListeningLoopActive) {
-                    // Echo Prevention: If ROX is speaking, pause processing mic input
-                    if (audioPlayer.isPlayingAudio()) {
+                    // Echo Prevention & Loudspeaker Protection: Pause mic processing while ROX speaks
+                    if (isRecordingPaused || audioPlayer.isPlayingAudio()) {
                         delay(150)
                         continue
                     }
@@ -341,24 +369,31 @@ class JarvisService : Service() {
             // Test acknowledgment reply (Strictly no LLM as requested)
             val replyText = "Haan boss, Rox sun raha hai. Boliye."
 
+            // Stop mic recording IMMEDIATELY so phone leaves recording state and routes to loudspeaker!
+            pauseRecordingForSpeech()
+
             val ttsUrl = apiClient.getTtsAudioUrl(replyText)
             withContext(Dispatchers.Main) {
                 audioPlayer.playUrl(
                     url = ttsUrl,
                     onStart = {
-                        updateNotification("🗣️ ROX Speaking (Prabhat +20%)...")
+                        updateNotification("🗣️ ROX Speaking (Loudspeaker)...")
                         broadcastStatus("SPEAKING", replyText, res.matchPercent, res.pitch)
                     },
                     onComplete = {
                         serviceScope.launch {
-                            delay(400) // Clear room echo
+                            delay(500) // Clear room echo before mic resumes
+                            resumeRecordingAfterSpeech()
                             updateNotification("🟢 ROX Active • Listening for your voice...")
                             broadcastStatus("IDLE", "Standby", 0.0, 0)
                         }
                     },
                     onError = {
-                        updateNotification("🟢 ROX Active • Listening for your voice...")
-                        broadcastStatus("IDLE", "Standby", 0.0, 0)
+                        serviceScope.launch {
+                            resumeRecordingAfterSpeech()
+                            updateNotification("🟢 ROX Active • Listening for your voice...")
+                            broadcastStatus("IDLE", "Standby", 0.0, 0)
+                        }
                     }
                 )
             }
@@ -386,7 +421,10 @@ class JarvisService : Service() {
 
     private fun cleanUpAudioRecord() {
         try {
-            audioRecord?.stop()
+            isRecordingPaused = false
+            if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                audioRecord?.stop()
+            }
             audioRecord?.release()
         } catch (e: Exception) {
             e.printStackTrace()

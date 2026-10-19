@@ -1,11 +1,15 @@
 package com.nxtzenmaker.jarvis
 
+import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.MediaPlayer
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AudioPlayer {
+class AudioPlayer(private val context: Context? = null) {
 
     private var mediaPlayer: MediaPlayer? = null
     private var isPlaying = false
@@ -19,13 +23,38 @@ class AudioPlayer {
         stop()
 
         try {
+            val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            audioManager?.mode = AudioManager.MODE_NORMAL
+
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setLegacyStreamType(AudioManager.STREAM_MUSIC)
                         .build()
                 )
+
+                // Force output routing to built-in loudspeaker unless user has headphones connected
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && audioManager != null) {
+                    try {
+                        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                        val hasHeadphones = devices.any {
+                            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                            it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+                        }
+                        if (!hasHeadphones) {
+                            val speaker = devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                            if (speaker != null) {
+                                preferredDevice = speaker
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
                 setDataSource(url)
                 setOnPreparedListener { mp ->
                     this@AudioPlayer.isPlaying = true

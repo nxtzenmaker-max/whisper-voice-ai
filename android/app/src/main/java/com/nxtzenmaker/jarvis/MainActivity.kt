@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         audioRecorder = AudioRecorder(this)
-        audioPlayer = AudioPlayer()
+        audioPlayer = AudioPlayer(this)
         apiClient = ApiClient("https://whisper-voice-ai.vercel.app")
 
         setupViews()
