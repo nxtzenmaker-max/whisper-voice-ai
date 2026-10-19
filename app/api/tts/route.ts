@@ -1,158 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { spawn } from 'child_process';
 
-const HINGLISH_PHONETIC_MAP: Record<string, string> = {
-  haan: 'haa',
-  kya: 'kyaa',
-  boliye: 'bolee-ye',
-  bolo: 'boh-lo',
-  kaam: 'kahm',
-  sab: 'sub',
-  hai: 'high',
-  hain: 'high',
-  kaise: 'kie-say',
-  kaisa: 'kie-saa',
-  kaisi: 'kie-see',
-  nahi: 'na-hee',
-  nahin: 'na-hee',
-  bhai: 'bhaai',
-  madad: 'mudd-udd',
-  aaj: 'aahj',
-  karo: 'kah-ro',
-  karoon: 'kah-roon',
-  karein: 'kah-ren',
-  karen: 'kah-ren',
-  aapka: 'up-kaa',
-  aapki: 'up-kee',
-  mera: 'may-raa',
-  meri: 'may-ree',
-  accha: 'utch-haa',
-  theek: 'theek',
-  baat: 'baht',
-  kuch: 'kootch',
-  batao: 'buh-taho',
-  shuru: 'shoo-roo',
-  khatam: 'khuh-tumm',
-  namaste: 'nuh-mus-tay',
-  dost: 'dohst',
-  yahan: 'yuh-haan',
-  wahan: 'wuh-haan',
-  abhi: 'uh-bhee',
-  chahiye: 'chah-hee-ye',
-};
+function generatePrabhatTTS(text: string, rate: string = '+20%'): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const py = spawn('python3', [
+      '-c',
+      `
+import sys, asyncio, edge_tts
+async def main():
+    comm = edge_tts.Communicate(sys.argv[1], 'en-IN-PrabhatNeural', rate=sys.argv[2])
+    async for chunk in comm.stream():
+        if chunk['type'] == 'audio':
+            sys.stdout.buffer.write(chunk['data'])
+asyncio.run(main())
+      `,
+      text,
+      rate,
+    ]);
 
-function phonetizeForEnglishVoice(input: string): string {
-  return input
-    .split(/\b/)
-    .map((word) => {
-      const lower = word.toLowerCase();
-      if (HINGLISH_PHONETIC_MAP[lower]) {
-        const mapped = HINGLISH_PHONETIC_MAP[lower];
-        return word[0] === word[0].toUpperCase()
-          ? mapped.charAt(0).toUpperCase() + mapped.slice(1)
-          : mapped;
+    const chunks: Buffer[] = [];
+    py.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+    py.on('error', reject);
+    py.on('close', (code) => {
+      if (code === 0 && chunks.length > 0) {
+        resolve(Buffer.concat(chunks));
+      } else {
+        reject(new Error('Python exited with code ' + code));
       }
-      return word;
-    })
-    .join('');
+    });
+  });
 }
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const rawText = url.searchParams.get('text') || 'Hello boss, all systems online.';
-    const voice = url.searchParams.get('voice') || 'Tony';
-    const pitchParam = url.searchParams.get('pitch') || '-18%';
-    const rateParam = url.searchParams.get('rate') || '108%';
+    const text = url.searchParams.get('text') || 'Haan boss, boliye kya madad karoon? Data analyze ho gaya hai, all systems ready hain.';
+    const rate = url.searchParams.get('rate') || '+20%';
 
-    let textToSynthesize = rawText;
-    const pollyLang = 'Matthew'; // Tony is 100% Genuine Male (Matthew)!
-
-    // If input text has Devanagari Hindi characters, transliterate to clean Roman Hinglish
-    // because Matthew (American model) will glitch on Devanagari
-    if (/[\u0900-\u097F]/.test(rawText)) {
-      try {
-        const groqKey = process.env.GROQ_API_KEY;
-        if (groqKey) {
-          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${groqKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'qwen/qwen3.8-27b',
-              messages: [
-                {
-                  role: 'system',
-                  content:
-                    'Transliterate Hindi Devanagari text into natural conversational Roman Hinglish using English phonics. Keep English words (boss, data, system, ready, plan, AI) as is. Output ONLY the transliterated text, no explanation.',
-                },
-                { role: 'user', content: rawText },
-              ],
-              temperature: 0.0,
-              max_tokens: 300,
-            }),
-          });
-          const groqData = await groqRes.json();
-          const converted = groqData.choices?.[0]?.message?.content?.trim();
-          if (converted && converted.length > 0) {
-            textToSynthesize = converted;
-          }
-        }
-      } catch (convErr) {
-        console.warn('Groq Devanagari to Roman conversion error:', convErr);
-      }
-    }
-
-    // Apply phonetic enhancer for smooth American pronunciation of Roman Hindi syllables
-    textToSynthesize = phonetizeForEnglishVoice(textToSynthesize);
-
-    // Apply speed rate if desired
-    if (rateParam && rateParam !== '100%') {
-      textToSynthesize = `<prosody rate="${rateParam}">${textToSynthesize}</prosody>`;
-    }
-
-    // 2. Try Amazon Polly neural speech endpoint (via server-side proxy)
+    // 1. Primary: Direct high-speed Python Edge-TTS (en-IN-PrabhatNeural, Male Tech Tone)
     try {
-      const formData = new URLSearchParams();
-      formData.append('msg', textToSynthesize.slice(0, 400));
-      formData.append('lang', pollyLang);
-      formData.append('source', 'ttsmp3');
-
-      const res = await fetch('https://ttsmp3.com/makemp3_new.php', {
-        method: 'POST',
+      const audioBuffer = await generatePrabhatTTS(text, rate);
+      return new NextResponse(new Uint8Array(audioBuffer), {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Content-Type': 'audio/mpeg',
+          'Cache-Control': 'public, max-age=86400',
+          'Access-Control-Allow-Origin': '*',
         },
-        body: formData.toString(),
       });
-
-      const data = await res.json();
-
-      if (data && data.success === 1 && data.URL) {
-        const audioFetch = await fetch(data.URL);
-        if (audioFetch.ok) {
-          const audioBuffer = await audioFetch.arrayBuffer();
-          return new NextResponse(audioBuffer, {
-            headers: {
-              'Content-Type': 'audio/mpeg',
-              'Cache-Control': 'public, max-age=86400',
-            },
-          });
-        }
-      }
-    } catch (primaryErr) {
-      console.warn('Primary TTS provider error, falling back:', primaryErr);
+    } catch (pyErr) {
+      console.warn('Local Python edge-tts not available, checking Vercel /api/speech:', pyErr);
     }
 
-    // 2. High-speed Fallback to Google TTS
-    const lang = voice === 'Aditi' || voice === 'Kabir' || voice === 'Raveena' ? 'hi' : 'en-GB';
-    const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(
-      textToSynthesize.replace(/<[^>]*>/g, '').slice(0, 200)
-    )}`;
+    // 2. Secondary: Vercel Python Serverless Endpoint (/api/speech)
+    try {
+      const origin = url.origin;
+      const speechRes = await fetch(
+        `${origin}/api/speech?voice=en-IN-PrabhatNeural&rate=${encodeURIComponent(
+          rate
+        )}&text=${encodeURIComponent(text)}`
+      );
+      if (speechRes.ok) {
+        const buffer = await speechRes.arrayBuffer();
+        return new NextResponse(buffer, {
+          headers: {
+            'Content-Type': 'audio/mpeg',
+            'Cache-Control': 'public, max-age=86400',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+    } catch (speechErr) {
+      console.warn('Vercel /api/speech error:', speechErr);
+    }
 
+    // 3. Fallback: Google TTS
+    const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=hi&client=tw-ob&q=${encodeURIComponent(
+      text.slice(0, 200)
+    )}`;
     const fallbackRes = await fetch(fallbackUrl, {
       headers: {
         'User-Agent':
