@@ -23,7 +23,7 @@ class AudioPlayer {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
                 setDataSource(url)

@@ -68,6 +68,9 @@ class JarvisService : Service() {
         audioPlayer = AudioPlayer()
         apiClient = ApiClient("https://whisper-voice-ai.vercel.app")
 
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+        audioManager?.mode = android.media.AudioManager.MODE_NORMAL
+
         acquireWakeLock()
         createNotificationChannel()
         startInForeground("🟢 ROX Active • Listening for your voice...")
@@ -182,7 +185,7 @@ class JarvisService : Service() {
 
             try {
                 audioRecord = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
+                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
                     sampleRate,
                     channelConfig,
                     audioFormat,

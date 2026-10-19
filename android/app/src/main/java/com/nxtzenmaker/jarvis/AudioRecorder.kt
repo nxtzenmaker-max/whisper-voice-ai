@@ -36,7 +36,7 @@ class AudioRecorder(private val context: Context) {
 
         try {
             audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 sampleRate,
                 channelConfig,
                 audioFormat,
