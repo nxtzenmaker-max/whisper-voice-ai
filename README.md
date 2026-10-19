@@ -65,14 +65,15 @@ Deployable to **Vercel** with zero-configuration! 🚀
 
 ---
 
-## 📱 Android Jarvis Voice Assistant (APK)
+## 📱 Android ROX Voice Assistant (APK)
 
 The repository includes a native Android client in `android/` equipped with:
+- **Continuous Background Listening (Always-On Ear)**: Listens and responds even when the phone is locked or app is swiped from recents.
 - **Biometric Voiceprint Extraction**: YIN fundamental pitch (F0) + 20-band Mel-frequency filterbank calculated locally on device.
 - **Strict Silent Gatekeeper**:
-  - **Owner (`Aap`)**: Replies with **Prabhat (+20% speed)** audio stream.
+  - **Owner (`Aap`)**: Replies with **Prabhat (+20% speed)** audio stream (*"Haan boss, Rox sun raha hai."*).
   - **Stranger / Mummy / Friends**: 100% **SILENT** (security gate blocks unauthorized voices).
-- **Automated CI/CD**: Every push automatically builds `Jarvis-Voice-Assistant.apk` via GitHub Actions and publishes it to GitHub Releases & Artifacts.
+- **Automated CI/CD**: Every push automatically builds `Rox-Voice-Assistant.apk` via GitHub Actions and publishes it to GitHub Releases & Artifacts.
 
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Speech AI**: [Groq Whisper Large V3 Turbo](https://console.groq.com/)
