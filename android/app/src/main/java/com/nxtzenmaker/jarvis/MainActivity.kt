@@ -1,10 +1,18 @@
 package com.nxtzenmaker.jarvis
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,14 +35,29 @@ class MainActivity : AppCompatActivity() {
     private var durationJob: Job? = null
     private var recordDurationSeconds = 0
 
+    // Receiver to receive live background listening updates from JarvisService
+    private val serviceUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == JarvisService.BROADCAST_JARVIS_UPDATE) {
+                val state = intent.getStringExtra("state") ?: "IDLE"
+                val text = intent.getStringExtra("text") ?: ""
+                val matchPercent = intent.getDoubleExtra("matchPercent", 0.0)
+                val pitch = intent.getIntExtra("pitch", 0)
+
+                handleServiceStateUpdate(state, text, matchPercent, pitch)
+            }
+        }
+    }
+
     // Permission launcher
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val recordAudioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
         if (recordAudioGranted) {
-            JarvisService.startService(this)
-            binding.tvSpeakerStatus.text = "Permissions granted. Ready!"
+            checkAndStartBackgroundListening()
+            binding.tvSpeakerStatus.text = "Microphone Ready • Listening Active"
+            requestBatteryOptimizationExemption()
         } else {
             Toast.makeText(this, "Microphone permission is required for voice assistant", Toast.LENGTH_LONG).show()
             binding.tvSpeakerStatus.text = "Mic permission denied ❌"
@@ -55,8 +78,44 @@ class MainActivity : AppCompatActivity() {
         checkBackendHealth()
     }
 
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(JarvisService.BROADCAST_JARVIS_UPDATE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(serviceUpdateReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(serviceUpdateReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            unregisterReceiver(serviceUpdateReceiver)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun setupViews() {
         binding.tvBackendUrl.text = apiClient.baseUrl.removePrefix("https://")
+
+        val prefs = getSharedPreferences("jarvis_prefs", Context.MODE_PRIVATE)
+        val bgEnabled = prefs.getBoolean("bg_listening_enabled", true)
+        binding.switchBackgroundListening.isChecked = bgEnabled
+
+        binding.switchBackgroundListening.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("bg_listening_enabled", isChecked).apply()
+            if (isChecked) {
+                JarvisService.startListeningService(this)
+                Toast.makeText(this, "Continuous Background Ear Activated 🟢", Toast.LENGTH_SHORT).show()
+                binding.tvSpeakerStatus.text = "Background Ear: Active (Listening always)"
+            } else {
+                JarvisService.stopListeningService(this)
+                Toast.makeText(this, "Background Listening Paused", Toast.LENGTH_SHORT).show()
+                binding.tvSpeakerStatus.text = "Background Ear: Paused (Tap Mic to talk)"
+            }
+        }
 
         binding.switchRegister.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -79,6 +138,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkAndStartBackgroundListening() {
+        val prefs = getSharedPreferences("jarvis_prefs", Context.MODE_PRIVATE)
+        val bgEnabled = prefs.getBoolean("bg_listening_enabled", true)
+        if (bgEnabled) {
+            JarvisService.startListeningService(this)
+        }
+    }
+
     private fun checkAndRequestPermissions() {
         val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -92,7 +159,23 @@ class MainActivity : AppCompatActivity() {
         if (missing.isNotEmpty()) {
             permissionLauncher.launch(missing.toTypedArray())
         } else {
-            JarvisService.startService(this)
+            checkAndStartBackgroundListening()
+            requestBatteryOptimizationExemption()
+        }
+    }
+
+    @SuppressLint("BatteryLife")
+    private fun requestBatteryOptimizationExemption() {
+        try {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -109,6 +192,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun handleServiceStateUpdate(state: String, text: String, matchPercent: Double, pitch: Int) {
+        when (state) {
+            "LISTENING" -> {
+                binding.tvSpeakerStatus.text = "Hearing speech in background... 🎙️"
+                binding.tvMicStatus.text = "Listening..."
+            }
+            "VERIFYING" -> {
+                binding.tvSpeakerStatus.text = "Verifying Voiceprint Biometrics..."
+                binding.tvMicStatus.text = "Verifying..."
+            }
+            "OWNER_VERIFIED" -> {
+                val emeraldColor = ContextCompat.getColor(this, R.color.emerald_400)
+                binding.tvSpeakerStatus.text = "Aap (Owner) Verified ✅"
+                binding.tvSpeakerStatus.setTextColor(emeraldColor)
+                binding.tvMatchPercent.text = "${matchPercent}%"
+                binding.tvMatchPercent.setTextColor(emeraldColor)
+                binding.pbMatch.progress = matchPercent.toInt().coerceIn(0, 100)
+                binding.pbMatch.progressTintList = ColorStateList.valueOf(emeraldColor)
+
+                val pitchInfo = if (pitch > 0) "Pitch: ${pitch}Hz • " else ""
+                binding.tvBiometricDetail.text = "${pitchInfo}Owner Voice Confirmed (${matchPercent}%)"
+                binding.tvYouSpoke.text = "\"$text\""
+                binding.tvJarvisReply.text = "\"Haan boss, aapki aawaz verify ho gayi hai. Sun raha hoon.\""
+                binding.tvStatusSub.text = "Prabhat (+20% speed) Speaking..."
+            }
+            "STRANGER_BLOCKED" -> {
+                val redColor = ContextCompat.getColor(this, R.color.red_400)
+                binding.tvSpeakerStatus.text = "$text ❌"
+                binding.tvSpeakerStatus.setTextColor(redColor)
+                binding.tvMatchPercent.text = "${matchPercent}%"
+                binding.tvMatchPercent.setTextColor(redColor)
+                binding.pbMatch.progress = matchPercent.toInt().coerceIn(0, 100)
+                binding.pbMatch.progressTintList = ColorStateList.valueOf(redColor)
+
+                binding.tvBiometricDetail.text = "Voice Mismatch (${matchPercent}%) • SILENT GATE ACTIVATED"
+                binding.tvJarvisReply.text = "🔇 [MUTED] Security Gate: Speaker is NOT the owner. Audio response blocked."
+                binding.tvStatusSub.text = "Stranger Ignored • Zero Audio"
+                binding.tvMicStatus.text = "Tap to Speak"
+            }
+            "SPEAKING" -> {
+                binding.tvMicStatus.text = "Jarvis Speaking..."
+            }
+            "IDLE" -> {
+                binding.tvMicStatus.text = "Tap to Speak"
+            }
+        }
+    }
+
     private fun startListening() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             checkAndRequestPermissions()
@@ -117,10 +248,7 @@ class MainActivity : AppCompatActivity() {
 
         audioPlayer.stop()
 
-        val started = audioRecorder.startRecording { _ ->
-            // Amplitude visualizer callback if needed
-        }
-
+        val started = audioRecorder.startRecording()
         if (started) {
             binding.btnMic.setImageResource(R.drawable.ic_stop)
             binding.btnMic.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.red_500))
@@ -203,7 +331,6 @@ class MainActivity : AppCompatActivity() {
                 val pitchInfo = if (res.pitch > 0) "Pitch: ${res.pitch}Hz • " else ""
                 binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Owner identity confirmed." }}"
 
-                // Generate acknowledgment reply text (No LLM, fixed test reply as requested)
                 val replyText = if (res.isNewRegistration) {
                     "Sample save ho gaya boss. Ab Jarvis aapko pehchan lega."
                 } else {
@@ -213,7 +340,6 @@ class MainActivity : AppCompatActivity() {
                 binding.tvJarvisReply.text = "\"$replyText\""
                 binding.tvStatusSub.text = "Prabhat (+20% speed) speaking..."
 
-                // Play Prabhat TTS audio
                 val ttsUrl = apiClient.getTtsAudioUrl(replyText)
                 audioPlayer.playUrl(
                     url = ttsUrl,
@@ -240,7 +366,6 @@ class MainActivity : AppCompatActivity() {
                 val pitchInfo = if (res.pitch > 0) "Pitch: ${res.pitch}Hz • " else ""
                 binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Voice mismatch." }} • Access Denied! (STRANGER)"
 
-                // MUTED! No audio played!
                 binding.tvJarvisReply.text = "🔇 [MUTED] Security Gate: Speaker is NOT the owner. Audio output blocked."
                 binding.tvStatusSub.text = "Security Gate Active • Zero Audio Response"
                 binding.tvMicStatus.text = "Tap to Speak"

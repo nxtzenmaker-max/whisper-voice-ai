@@ -58,24 +58,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v1.0-apk
-          name: "Jarvis Voice Assistant Android APK (v1.0)"
+          tag_name: v1.1-apk
+          name: "Jarvis Voice Assistant Android APK (v1.1 - Always-Listening)"
           body: |
-            ### 🎙️ Jarvis Voice Assistant Android APK
+            ### 🎙️ Jarvis Voice Assistant Android APK (v1.1)
             
-            ✅ **Features**:
-            - **Microphone & Foreground Service**: Works seamlessly on Android 10-14.
-            - **Voice Biometrics Verification**: 20-band Mel Filterbank + YIN Pitch algorithm matching web Turso DB samples.
-            - **Strict Security Gatekeeper**:
-              - **Owner (Aap)**: Speaks response using **Prabhat (+20% speed)** Edge-TTS.
-              - **Stranger (Mummy, friends, unknown)**: 100% **SILENT** (no reply, access denied).
-            - **Direct Verification API**: Connects to `whisper-voice-ai.vercel.app`.
+            ✅ **NEW in v1.1**:
+            - 🟢 **Continuous Background Listening (Always-On Ear)**: Works when phone is locked, app is in the background, or swiped from recent apps!
+            - ⚡ **Energy-Based Voice Activity Detector (VAD)**: Minimal battery usage; activates on speech.
+            - 🛡️ **Echo Prevention**: Automatically mutes the mic while Jarvis speaks to avoid self-triggering loops.
+            - 🔐 **Biometric Gatekeeper**: Strictly verifies owner vs stranger before responding.
+            - 🗣️ **Prabhat Voice (+20% speed)**: Natural Indian male voice replies.
             
             📥 **How to Install**:
             1. Download `Jarvis-Voice-Assistant.apk` below.
-            2. Open the file on your Android device and tap "Install" (allow "Install unknown apps" if prompted).
-            3. Open the app and grant Microphone & Notification permissions.
-            4. Tap the Microphone button and speak!
+            2. Tap "Install" or "Update" on your Android device.
+            3. Open the app and ensure "Continuous Background Listening" is ON.
+            4. Lock your phone or swipe from recents, speak naturally, and Jarvis will reply!
           draft: false
           prerelease: false
           files: Jarvis-Voice-Assistant.apk

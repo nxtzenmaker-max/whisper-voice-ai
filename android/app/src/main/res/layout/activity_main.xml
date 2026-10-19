@@ -248,30 +248,48 @@
         android:id="@+id/bottomSettingsLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchRegister"
-            android:layout_width="0dp"
+            android:id="@+id/switchBackgroundListening"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Enroll Voice Mode"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:thumbTint="@color/cyan_400"
-            app:trackTint="@color/cyan_glow" />
+            android:checked="true"
+            android:text="Continuous Background Listening (Always-On)"
+            android:textColor="@color/emerald_400"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:thumbTint="@color/emerald_400"
+            app:trackTint="@color/emerald_glow" />
 
-        <TextView
-            android:id="@+id/tvBackendUrl"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="whisper-voice-ai.vercel.app"
-            android:textColor="@color/text_muted"
-            android:textSize="11sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchRegister"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Enroll Voice Mode"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                app:thumbTint="@color/cyan_400"
+                app:trackTint="@color/cyan_glow" />
+
+            <TextView
+                android:id="@+id/tvBackendUrl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="whisper-voice-ai.vercel.app"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp" />
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
