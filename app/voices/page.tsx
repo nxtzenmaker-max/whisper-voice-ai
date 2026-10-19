@@ -19,21 +19,21 @@ import {
 } from 'lucide-react';
 
 const TONY_QUICK_PROMPTS = [
-  'Haan boss, boliye kya madad karoon? Data analyze ho gaya hai, all systems ready hain.',
-  'Aapka voice match ho gaya hai, welcome back boss!',
-  'Bhai, aaj ka kya plan hai? Main bilkul tayyar hoon.',
+  'Hey boss, data analyze ho gaya hai. All systems online, what is our next mission?',
+  'Voice match ho gaya hai, welcome back boss!',
+  'Bataiye boss, what is the plan today? Main bilkul ready hoon.',
   'Mummy bol rahi thi isliye maine koi reply nahi diya.',
   'Command executed successfully boss, sab theek hai.',
 ];
 
 export default function TonyVoiceStudio() {
   const [voiceMode, setVoiceMode] = useState<'Tony' | 'Tony-US'>('Tony');
-  const [pitch, setPitch] = useState<string>('-18%');
-  const [rate, setRate] = useState<string>('108%');
+  const [pitch, setPitch] = useState<string>('default');
+  const [rate, setRate] = useState<string>('105%');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
   const [customText, setCustomText] = useState<string>(
-    'Haan boss, boliye kya madad karoon? Data analyze ho gaya hai, all systems ready hain.'
+    'Hey boss, data analyze ho gaya hai. All systems online, what is our next mission?'
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);

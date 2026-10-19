@@ -65,53 +65,51 @@ export async function GET(req: NextRequest) {
     const rateParam = url.searchParams.get('rate') || '108%';
 
     let textToSynthesize = rawText;
-    let pollyLang = 'Aditi';
+    const pollyLang = 'Matthew'; // Tony is 100% Genuine Male (Matthew)!
 
-    // 1. Raw American English Voice (Tony-US / Matthew)
-    if (voice === 'Tony-US' || voice === 'Matthew-US') {
-      pollyLang = 'Matthew';
-      textToSynthesize = phonetizeForEnglishVoice(rawText);
-    } else {
-      // 2. Default Flagship Voice: TONY (Fast, confident, natural Hinglish male AI)
-      // Converts Roman Hinglish into clean Devanagari acoustics so Tony pronounces
-      // Hindi words with 100% crystal-clear clarity, and keeps English loanwords crisp.
-      if (/[a-zA-Z]/.test(rawText)) {
-        try {
-          const groqKey = process.env.GROQ_API_KEY;
-          if (groqKey) {
-            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${groqKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'qwen/qwen3.8-27b',
-                messages: [
-                  {
-                    role: 'system',
-                    content:
-                      'If the input contains conversational Roman Hinglish or Hindi words, convert it into natural Hindi Devanagari script for speech synthesis. Keep pure English sentences/words (boss, AI, system, ready, status, data, analyze) in English or standard Devanagari. Output ONLY the converted text, no explanation.',
-                  },
-                  { role: 'user', content: rawText },
-                ],
-                temperature: 0.0,
-                max_tokens: 300,
-              }),
-            });
-            const groqData = await groqRes.json();
-            const converted = groqData.choices?.[0]?.message?.content?.trim();
-            if (converted && converted.length > 0) {
-              textToSynthesize = converted;
-            }
+    // If input text has Devanagari Hindi characters, transliterate to clean Roman Hinglish
+    // because Matthew (American model) will glitch on Devanagari
+    if (/[\u0900-\u097F]/.test(rawText)) {
+      try {
+        const groqKey = process.env.GROQ_API_KEY;
+        if (groqKey) {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'qwen/qwen3.8-27b',
+              messages: [
+                {
+                  role: 'system',
+                  content:
+                    'Transliterate Hindi Devanagari text into natural conversational Roman Hinglish using English phonics. Keep English words (boss, data, system, ready, plan, AI) as is. Output ONLY the transliterated text, no explanation.',
+                },
+                { role: 'user', content: rawText },
+              ],
+              temperature: 0.0,
+              max_tokens: 300,
+            }),
+          });
+          const groqData = await groqRes.json();
+          const converted = groqData.choices?.[0]?.message?.content?.trim();
+          if (converted && converted.length > 0) {
+            textToSynthesize = converted;
           }
-        } catch (convErr) {
-          console.warn('Groq Hinglish to Devanagari conversion error:', convErr);
         }
+      } catch (convErr) {
+        console.warn('Groq Devanagari to Roman conversion error:', convErr);
       }
+    }
 
-      // Tony Persona: Masculine confident pitch + crisp fast rate
-      textToSynthesize = `<prosody pitch="${pitchParam}" rate="${rateParam}">${textToSynthesize}</prosody>`;
+    // Apply phonetic enhancer for smooth American pronunciation of Roman Hindi syllables
+    textToSynthesize = phonetizeForEnglishVoice(textToSynthesize);
+
+    // Apply speed rate if desired
+    if (rateParam && rateParam !== '100%') {
+      textToSynthesize = `<prosody rate="${rateParam}">${textToSynthesize}</prosody>`;
     }
 
     // 2. Try Amazon Polly neural speech endpoint (via server-side proxy)
