@@ -1,10 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const HINGLISH_PHONETIC_MAP: Record<string, string> = {
+  haan: 'haa',
+  kya: 'kyaa',
+  boliye: 'bolee-ye',
+  bolo: 'boh-lo',
+  kaam: 'kahm',
+  sab: 'sub',
+  hai: 'high',
+  hain: 'high',
+  kaise: 'kie-say',
+  kaisa: 'kie-saa',
+  kaisi: 'kie-see',
+  nahi: 'na-hee',
+  nahin: 'na-hee',
+  bhai: 'bhaai',
+  madad: 'mudd-udd',
+  aaj: 'aahj',
+  karo: 'kah-ro',
+  karoon: 'kah-roon',
+  karein: 'kah-ren',
+  karen: 'kah-ren',
+  aapka: 'up-kaa',
+  aapki: 'up-kee',
+  mera: 'may-raa',
+  meri: 'may-ree',
+  accha: 'utch-haa',
+  theek: 'theek',
+  baat: 'baht',
+  kuch: 'kootch',
+  batao: 'buh-taho',
+  shuru: 'shoo-roo',
+  khatam: 'khuh-tumm',
+  namaste: 'nuh-mus-tay',
+  dost: 'dohst',
+  yahan: 'yuh-haan',
+  wahan: 'wuh-haan',
+  abhi: 'uh-bhee',
+  chahiye: 'chah-hee-ye',
+};
+
+function phonetizeForEnglishVoice(input: string): string {
+  return input
+    .split(/\b/)
+    .map((word) => {
+      const lower = word.toLowerCase();
+      if (HINGLISH_PHONETIC_MAP[lower]) {
+        const mapped = HINGLISH_PHONETIC_MAP[lower];
+        return word[0] === word[0].toUpperCase()
+          ? mapped.charAt(0).toUpperCase() + mapped.slice(1)
+          : mapped;
+      }
+      return word;
+    })
+    .join('');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const text = url.searchParams.get('text') || 'Hello boss, all systems online.';
+    const rawText = url.searchParams.get('text') || 'Hello boss, all systems online.';
     const voice = url.searchParams.get('voice') || 'Brian';
+
+    // If English-only voice (Matthew/Tony, Brian/Jarvis, Joey, Russell) is selected,
+    // adapt Roman Hinglish phonetically so American/British models don't butcher Hindi words
+    const isEnglishOnlyVoice = voice === 'Matthew' || voice === 'Brian' || voice === 'Joey' || voice === 'Russell';
+    const text = isEnglishOnlyVoice ? phonetizeForEnglishVoice(rawText) : rawText;
 
     // 1. Try Amazon Polly neural speech endpoint (via server-side proxy)
     try {
