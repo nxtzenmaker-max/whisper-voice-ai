@@ -98,6 +98,48 @@ class ApiClient(var baseUrl: String = "https://whisper-voice-ai.vercel.app") {
         return "$cleanBaseUrl/api/tts?voice=en-IN-PrabhatNeural&rate=$encodedRate&text=$encodedText"
     }
 
+    data class VoiceprintStatus(
+        val hasOwner: Boolean,
+        val sampleCount: Int,
+        val avgPitch: Int?
+    )
+
+    suspend fun getVoiceprintStatus(): VoiceprintStatus = withContext(Dispatchers.IO) {
+        try {
+            val cleanBaseUrl = baseUrl.trimEnd('/')
+            val request = Request.Builder()
+                .url("$cleanBaseUrl/api/voiceprint")
+                .get()
+                .build()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val json = JSONObject(response.body?.string() ?: "{}")
+                return@withContext VoiceprintStatus(
+                    hasOwner = json.optBoolean("has_owner", false),
+                    sampleCount = json.optInt("sample_count", 0),
+                    avgPitch = if (json.has("avg_pitch") && !json.isNull("avg_pitch")) json.getInt("avg_pitch") else null
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return@withContext VoiceprintStatus(false, 0, null)
+    }
+
+    suspend fun resetVoiceprint(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val cleanBaseUrl = baseUrl.trimEnd('/')
+            val request = Request.Builder()
+                .url("$cleanBaseUrl/api/voiceprint")
+                .delete()
+                .build()
+            val response = client.newCall(request).execute()
+            return@withContext response.isSuccessful
+        } catch (e: Exception) {
+            return@withContext false
+        }
+    }
+
     suspend fun checkHealth(): Boolean = withContext(Dispatchers.IO) {
         try {
             val cleanBaseUrl = baseUrl.trimEnd('/')

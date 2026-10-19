@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     await initDb();
     const ownerProfile = await getOwnerProfile();
 
-    if (action === 'register' || !ownerProfile || ownerProfile.samples.length === 0) {
+    if (action === 'register') {
       if (incomingVector.length > 0) {
         const res = await addOwnerSample(incomingVector, incomingPitch);
         sampleCount = res.sampleCount;
@@ -126,12 +126,20 @@ export async function POST(req: NextRequest) {
           : `Sample ${sampleCount} Enrolled`;
       isNewRegistration = true;
     } else {
-      const identification = identifySpeaker(incomingVector, incomingPitch, ownerProfile);
-      isOwner = identification.isOwner;
-      speakerName = identification.speakerName;
-      matchPercent = identification.matchPercent;
-      detail = identification.detail || '';
-      sampleCount = ownerProfile.samples.length;
+      if (!ownerProfile || ownerProfile.samples.length === 0) {
+        isOwner = false;
+        speakerName = 'Unknown (Owner Not Enrolled)';
+        matchPercent = 0;
+        detail = 'Owner voice register nahi hui hai. Pehle 3 samples enroll karein!';
+        sampleCount = 0;
+      } else {
+        const identification = identifySpeaker(incomingVector, incomingPitch, ownerProfile);
+        isOwner = identification.isOwner;
+        speakerName = identification.speakerName;
+        matchPercent = identification.matchPercent;
+        detail = identification.detail || '';
+        sampleCount = ownerProfile.samples.length;
+      }
     }
 
     // Save transcription to Turso DB

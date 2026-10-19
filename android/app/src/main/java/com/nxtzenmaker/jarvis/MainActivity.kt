@@ -129,6 +129,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnResetVoice.setOnClickListener {
+            lifecycleScope.launch {
+                val ok = apiClient.resetVoiceprint()
+                if (ok) {
+                    Toast.makeText(this@MainActivity, "Voice Reset Done! Please enroll 3 samples.", Toast.LENGTH_LONG).show()
+                    binding.switchRegister.isChecked = true
+                    binding.tvModeBadge.text = "ENROLL (0/3)"
+                    binding.tvSpeakerStatus.text = "⚠️ Voice Reset Done"
+                    binding.tvBiometricDetail.text = "Mic dabakar 3 baar aawaz bol kar enroll karein."
+                    binding.pbMatch.progress = 0
+                    binding.tvMatchPercent.text = "0%"
+                }
+            }
+        }
+
         binding.btnMic.setOnClickListener {
             if (audioRecorder.isCurrentlyRecording()) {
                 stopListeningAndVerify()
@@ -185,6 +200,21 @@ class MainActivity : AppCompatActivity() {
             if (ok) {
                 binding.tvStatusSub.text = "● Connected to Vercel Backend"
                 binding.tvStatusSub.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.emerald_400))
+
+                val status = apiClient.getVoiceprintStatus()
+                if (!status.hasOwner || status.sampleCount == 0) {
+                    binding.switchRegister.isChecked = true
+                    binding.tvModeBadge.text = "ENROLL (0/3)"
+                    binding.tvModeBadge.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.red_400))
+                    binding.tvSpeakerStatus.text = "⚠️ Voice Not Registered Yet"
+                    binding.tvBiometricDetail.text = "ROX abhi kisi ke liye nahi bolega! Niche 'Enroll Voice' ON hai, Mic daba kar 3 samples boliye."
+                } else {
+                    binding.switchRegister.isChecked = false
+                    binding.tvModeBadge.text = "IDENTIFY"
+                    binding.tvModeBadge.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.cyan_400))
+                    binding.tvSpeakerStatus.text = "Owner Enrolled (${status.sampleCount} Samples) ✅"
+                    binding.tvBiometricDetail.text = "Biometric Lock Active • Strangers stay silent."
+                }
             } else {
                 binding.tvStatusSub.text = "○ Backend connecting..."
                 binding.tvStatusSub.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
@@ -320,7 +350,47 @@ class MainActivity : AppCompatActivity() {
             binding.tvMatchPercent.text = "${res.matchPercent}%"
             binding.pbMatch.progress = matchInt
 
-            if (res.isOwner) {
+            if (res.isNewRegistration) {
+                // SAMPLE SAVED!
+                val sampleNum = res.sampleCount
+                val emeraldColor = ContextCompat.getColor(this@MainActivity, R.color.emerald_400)
+                binding.tvSpeakerStatus.setTextColor(emeraldColor)
+                binding.tvMatchPercent.setTextColor(emeraldColor)
+                binding.pbMatch.progressTintList = ColorStateList.valueOf(emeraldColor)
+
+                val replyText: String
+                if (sampleNum < 3) {
+                    binding.tvModeBadge.text = "ENROLL ($sampleNum/3)"
+                    binding.tvSpeakerStatus.text = "Sample $sampleNum/3 Saved ✅"
+                    binding.tvBiometricDetail.text = "Sample $sampleNum save ho gaya! Niche Mic dabakar sample ${sampleNum + 1}/3 boliye."
+                    replyText = "Sample $sampleNum save ho gaya boss. Ek aur sample boliye."
+                } else {
+                    binding.switchRegister.isChecked = false
+                    binding.tvModeBadge.text = "IDENTIFY"
+                    binding.tvSpeakerStatus.text = "Aap (Owner) - Enrolled (3/3) ✅"
+                    binding.tvBiometricDetail.text = "Biometric Voiceprint 3 samples se lock ho gaya! Ab ROX sirf AAPKO reply dega."
+                    replyText = "Aapki aawaz 3 samples ke sath register ho gayi hai boss. Ab Rox sirf aapki aawaz pehchanega."
+                }
+
+                binding.tvJarvisReply.text = "\"$replyText\""
+                binding.tvStatusSub.text = "Prabhat (+20% speed) speaking..."
+
+                val ttsUrl = apiClient.getTtsAudioUrl(replyText)
+                audioPlayer.playUrl(
+                    url = ttsUrl,
+                    onStart = {
+                        binding.tvMicStatus.text = "ROX Speaking..."
+                    },
+                    onComplete = {
+                        binding.tvMicStatus.text = "Tap to Speak"
+                        binding.tvStatusSub.text = "● Reply completed"
+                    },
+                    onError = { err ->
+                        binding.tvMicStatus.text = "Tap to Speak"
+                        binding.tvStatusSub.text = "TTS playback error: $err"
+                    }
+                )
+            } else if (res.isOwner) {
                 // OWNER VERIFIED!
                 val emeraldColor = ContextCompat.getColor(this@MainActivity, R.color.emerald_400)
                 binding.tvSpeakerStatus.text = "${res.speakerName} ✅"
@@ -331,12 +401,7 @@ class MainActivity : AppCompatActivity() {
                 val pitchInfo = if (res.pitch > 0) "Pitch: ${res.pitch}Hz • " else ""
                 binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Owner identity confirmed." }}"
 
-                val replyText = if (res.isNewRegistration) {
-                    "Sample save ho gaya boss. Ab Rox aapko pehchan lega."
-                } else {
-                    "Haan boss, Rox online hai. Aapki aawaz verify ho gayi hai."
-                }
-
+                val replyText = "Haan boss, Rox online hai. Aapki aawaz verify ho gayi hai."
                 binding.tvJarvisReply.text = "\"$replyText\""
                 binding.tvStatusSub.text = "Prabhat (+20% speed) speaking..."
 
@@ -367,7 +432,7 @@ class MainActivity : AppCompatActivity() {
                 binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Voice mismatch." }} • Access Denied! (STRANGER)"
 
                 binding.tvJarvisReply.text = "🔇 [MUTED] Security Gate: Speaker is NOT the owner. Audio output blocked."
-                binding.tvStatusSub.text = "Security Gate Active • Zero Audio Response"
+                binding.tvStatusSub.text = "Stranger Ignored • Zero Audio Response"
                 binding.tvMicStatus.text = "Tap to Speak"
             }
         }

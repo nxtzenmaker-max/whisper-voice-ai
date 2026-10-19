@@ -23,12 +23,13 @@ export function identifySpeaker(
   incomingPitch: number,
   ownerProfile: OwnerProfile | null
 ): { isOwner: boolean; speakerName: string; matchPercent: number; detail?: string } {
+  // STRICT GATE: If owner has not enrolled any voice, NO ONE is owner!
   if (!ownerProfile || !ownerProfile.samples || ownerProfile.samples.length === 0) {
     return {
-      isOwner: true,
-      speakerName: 'Aap (Owner - Registered ✅)',
-      matchPercent: 100,
-      detail: 'Pehle sample se Owner profile set ho gayi',
+      isOwner: false,
+      speakerName: 'Unknown (Owner Not Enrolled)',
+      matchPercent: 0,
+      detail: 'Owner voice register nahi hui hai. Pehle Enroll Voice Mode me 3 samples boliye!',
     };
   }
 
@@ -37,56 +38,78 @@ export function identifySpeaker(
     cosineSimilarity(incomingVector, sample.vector)
   );
   const bestSimilarity = Math.max(...similarities);
-  const matchPercent = Math.max(0, Math.min(100, Math.round(bestSimilarity * 1000) / 10));
+
+  // Calibrate similarity scale:
+  // Raw positive filterbank similarity for strangers is ~0.80 - 0.90.
+  // Genuine owner voice matches at ~0.95 - 0.99.
+  // Scale: 0.85 -> 0%, 0.98 -> 100%
+  const calibrated = Math.max(
+    0,
+    Math.min(100, Math.round(((bestSimilarity - 0.85) / (0.98 - 0.85)) * 1000) / 10)
+  );
+  const matchPercent = calibrated;
 
   const inPitch = Math.round(incomingPitch || 0);
 
-  // Pitch Envelope Check:
-  // Male voices: ~95-155 Hz, Female (Mummy) voices: ~185-265 Hz.
-  if (inPitch > 0 && ownerProfile.avgPitch > 0) {
-    const upperLimit = Math.max(ownerProfile.maxPitch, ownerProfile.avgPitch) + 35;
-    if (inPitch > upperLimit) {
-      return {
-        isOwner: false,
-        speakerName: 'Koi aur (Mummy / Female Voice)',
-        matchPercent,
-        detail: `Pitch Mismatch: ${inPitch}Hz (Owner Range: ${ownerProfile.minPitch}-${ownerProfile.maxPitch}Hz) ❌`,
-      };
-    }
+  // 1. Pitch Envelope Check:
+  // Real owner's pitch must fall within owner's enrolled pitch envelope (+/- 25 Hz)
+  if (ownerProfile.avgPitch > 0) {
+    if (inPitch > 0) {
+      const upperLimit = Math.max(ownerProfile.maxPitch, ownerProfile.avgPitch) + 25;
+      if (inPitch > upperLimit) {
+        return {
+          isOwner: false,
+          speakerName: 'Koi aur (High Pitch / Stranger)',
+          matchPercent,
+          detail: `Pitch Mismatch: ${inPitch}Hz (Owner Range: ${ownerProfile.minPitch}-${ownerProfile.maxPitch}Hz) ❌`,
+        };
+      }
 
-    const lowerLimit = Math.min(ownerProfile.minPitch, ownerProfile.avgPitch) - 30;
-    if (inPitch < lowerLimit && lowerLimit > 50) {
-      return {
-        isOwner: false,
-        speakerName: 'Koi aur (Alag Aawaz / Low Pitch)',
-        matchPercent,
-        detail: `Pitch Mismatch: ${inPitch}Hz (Owner Range: ${ownerProfile.minPitch}-${ownerProfile.maxPitch}Hz) ❌`,
-      };
+      const lowerLimit = Math.min(ownerProfile.minPitch, ownerProfile.avgPitch) - 25;
+      if (inPitch < lowerLimit && lowerLimit > 50) {
+        return {
+          isOwner: false,
+          speakerName: 'Koi aur (Low Pitch / Stranger)',
+          matchPercent,
+          detail: `Pitch Mismatch: ${inPitch}Hz (Owner Range: ${ownerProfile.minPitch}-${ownerProfile.maxPitch}Hz) ❌`,
+        };
+      }
+    } else {
+      // Unvoiced or whisper: require very high vector similarity
+      if (bestSimilarity < 0.96) {
+        return {
+          isOwner: false,
+          speakerName: 'Koi aur (Unclear / Stranger)',
+          matchPercent,
+          detail: `Unvoiced pitch and similarity too low (${matchPercent}%) ❌`,
+        };
+      }
     }
   }
 
-  // Vector Match Check:
-  // With multiple enrolled samples from the owner, the user's best match with one of their own notes
-  // is almost always >= 0.70 (and typically 85%-98%).
-  // Other people (or Mummy) with different spectral formants match at 30%-55%.
-  if (bestSimilarity >= 0.70) {
+  // 2. Vector Threshold Check:
+  // Genuine owner must achieve at least 70% calibrated match (raw similarity >= 0.941)
+  if (matchPercent >= 70.0 && bestSimilarity >= 0.941) {
     return {
       isOwner: true,
       speakerName: 'Aap (Owner)',
       matchPercent,
-      detail: inPitch > 0 ? `Multi-Sample Verified (${matchPercent}% • ${inPitch}Hz) ✅` : `Multi-Sample Verified (${matchPercent}%) ✅`,
+      detail:
+        inPitch > 0
+          ? `Biometric Verified (${matchPercent}% • ${inPitch}Hz) ✅`
+          : `Biometric Verified (${matchPercent}%) ✅`,
     };
-  } else if (bestSimilarity >= 0.55) {
+  } else if (matchPercent >= 45.0) {
     return {
       isOwner: false,
-      speakerName: 'Koi aur (Similar Tone, Not Owner)',
+      speakerName: 'Koi aur (Similar Pitch, Not Owner)',
       matchPercent,
       detail: `Voiceprint Match: ${matchPercent}% (Owner threshold: 70%) ⚠️`,
     };
   } else {
     return {
       isOwner: false,
-      speakerName: 'Koi aur (Speaker 2 / Unknown)',
+      speakerName: 'Koi aur (Unknown Voice)',
       matchPercent,
       detail: `Voice Mismatch (${matchPercent}%) ❌`,
     };

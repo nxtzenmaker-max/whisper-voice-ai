@@ -58,8 +58,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v1.2-apk
-          name: "ROX Voice Assistant Android APK (v1.2 - Always-On)"
+          tag_name: v1.3-apk
+          name: "ROX Voice Assistant Android APK (v1.3 - Calibrated Voice Biometrics)"
           body: |
             ### 🎙️ ROX Voice Assistant Android APK (v1.2)
             
