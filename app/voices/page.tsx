@@ -3,219 +3,89 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
-  Volume2,
-  VolumeX,
+  Zap,
   Play,
   Square,
   Sparkles,
   Check,
   ArrowLeft,
   Bot,
-  Zap,
-  Radio,
-  Heart,
-  Shield,
   MessageSquare,
   Loader2,
-  Cpu,
+  Volume2,
+  Sliders,
+  Shield,
+  Activity,
 } from 'lucide-react';
 
-interface VoicePersona {
-  id: string;
-  name: string;
-  voiceKey: string;
-  engine: string;
-  badge: string;
-  gender: 'male' | 'female';
-  desc: string;
-  sampleText: string;
-  icon: any;
-  color: string;
-}
-
-const NEURAL_VOICE_PERSONAS: VoicePersona[] = [
-  {
-    id: 'kabir-desi-male',
-    name: 'Kabir (Desi Tech Male)',
-    voiceKey: 'Kabir',
-    engine: 'Polly Neural (Desi Male AI)',
-    badge: 'Desi Tony Stark 🇮🇳 (Male)',
-    gender: 'male',
-    desc: 'Deep, confident Indian male tech voice. Speaks 100% authentic, crystal-clear Hindi and Hinglish!',
-    sampleText: 'हाँ बॉस, बोलिए क्या मदद करूँ? आपका AI असिस्टेंट बिल्कुल तैयार है।',
-    icon: Zap,
-    color: 'from-amber-500 to-orange-600',
-  },
-  {
-    id: 'aditi-hindi',
-    name: 'Aditi (Desi AI Female)',
-    voiceKey: 'Aditi',
-    engine: 'Amazon Polly Indian (Aditi)',
-    badge: '100% Native Hinglish 🇮🇳 (Female)',
-    gender: 'female',
-    desc: 'Natural Indian bilingual female voice. Clean, polite, and fluent in Hindi and Hinglish.',
-    sampleText: 'नमस्ते बॉस! आपकी आवाज़ मैच हो गई है, स्वागत है!',
-    icon: Radio,
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'matthew-tony',
-    name: 'Tony (US Tech Male)',
-    voiceKey: 'Matthew',
-    engine: 'Amazon Polly Neural (Matthew)',
-    badge: 'US English ⚡ (American)',
-    gender: 'male',
-    desc: 'Crisp, fast American tech tone. Best for English conversations.',
-    sampleText: 'Hey boss, data analyze ho gaya hai. What is our next move?',
-    icon: Bot,
-    color: 'from-cyan-500 to-blue-600',
-  },
-  {
-    id: 'brian-jarvis',
-    name: 'Jarvis (British Deep Male)',
-    voiceKey: 'Brian',
-    engine: 'Amazon Polly Neural (Brian)',
-    badge: 'Iron Man Jarvis 🤖 (UK Male)',
-    gender: 'male',
-    desc: 'The iconic deep British butler voice. Best for English commands.',
-    sampleText: 'Good evening boss, all systems are online and operational. Awaiting your command.',
-    icon: Shield,
-    color: 'from-purple-500 to-indigo-600',
-  },
-  {
-    id: 'joanna-friday',
-    name: 'Friday (Modern US Female)',
-    voiceKey: 'Joanna',
-    engine: 'Amazon Polly Neural (Joanna)',
-    badge: 'Siri / Marvel 🌸',
-    gender: 'female',
-    desc: 'Sharp, polite, and intelligent modern assistant voice.',
-    sampleText: 'Boss, security protocols active hain. Voice recognition confirmed your authorization.',
-    icon: Heart,
-    color: 'from-rose-500 to-pink-600',
-  },
-  {
-    id: 'raveena-desi',
-    name: 'Raveena (Indian Accent Female)',
-    voiceKey: 'Raveena',
-    engine: 'Amazon Polly Indian (Raveena)',
-    badge: 'Indian English 🇮🇳',
-    gender: 'female',
-    desc: 'Classic Indian English accent with crystal-clear diction.',
-    sampleText: 'Hello boss, your code and database are completely synchronized.',
-    icon: Radio,
-    color: 'from-orange-500 to-amber-600',
-  },
-  {
-    id: 'amy-uk',
-    name: 'Amy (British Female AI)',
-    voiceKey: 'Amy',
-    engine: 'Amazon Polly Neural (Amy)',
-    badge: 'Royal UK Female 🇬🇧',
-    gender: 'female',
-    desc: 'Polite, sophisticated, and articulate British female voice.',
-    sampleText: 'All background tasks have completed successfully, boss.',
-    icon: Sparkles,
-    color: 'from-purple-500 to-indigo-600',
-  },
-  {
-    id: 'joey-us',
-    name: 'Joey (Casual US Male)',
-    voiceKey: 'Joey',
-    engine: 'Amazon Polly Neural (Joey)',
-    badge: 'Youthful & Chill 🎧',
-    gender: 'male',
-    desc: 'Relaxed, conversational American male voice.',
-    sampleText: 'Yo boss, everything looks good to go. What are we building next?',
-    icon: Cpu,
-    color: 'from-violet-500 to-purple-600',
-  },
-  {
-    id: 'russell-au',
-    name: 'Russell (Deep Charismatic Male)',
-    voiceKey: 'Russell',
-    engine: 'Amazon Polly Neural (Russell)',
-    badge: 'Deep & Resonant 🌌',
-    gender: 'male',
-    desc: 'Deep Australian resonant male voice. Warm and authoritative.',
-    sampleText: 'Authorization confirmed. Core systems fully engaged.',
-    icon: Shield,
-    color: 'from-red-600 to-rose-700',
-  },
-];
-
-const PURE_HINDI_QUICK_PROMPTS = [
-  'हाँ बॉस, बोलिए क्या मदद करूँ? आपका AI असिस्टेंट बिल्कुल तैयार है।',
-  'आपकी आवाज़ की पहचान हो चुकी है। स्वागत है बॉस!',
-  'आज का क्या कार्य है? मैं पूरी तरह तैयार हूँ।',
-  'कमांड सफलतापूर्वक पूरा हो गया है, सब सुरक्षित है।',
-  'मम्मी की आवाज़ पहचान ली गई है, इसलिए मैंने कोई उत्तर नहीं दिया।',
-];
-
-const HINGLISH_QUICK_PROMPTS = [
-  'Haan boss, boliye kya madad karoon? System ready hai.',
+const TONY_QUICK_PROMPTS = [
+  'Haan boss, boliye kya madad karoon? Data analyze ho gaya hai, all systems ready hain.',
   'Aapka voice match ho gaya hai, welcome back boss!',
-  'Bhai, aaj ka kya plan hai? Main tayyar hoon.',
+  'Bhai, aaj ka kya plan hai? Main bilkul tayyar hoon.',
   'Mummy bol rahi thi isliye maine koi reply nahi diya.',
-  'Command executed successfully, sab done hai.',
+  'Command executed successfully boss, sab theek hai.',
 ];
 
-export default function VoiceStudio() {
-  const [selectedVoiceKey, setSelectedVoiceKey] = useState<string>('Kabir');
-  const [playingKey, setPlayingKey] = useState<string | null>(null);
+export default function TonyVoiceStudio() {
+  const [voiceMode, setVoiceMode] = useState<'Tony' | 'Tony-US'>('Tony');
+  const [pitch, setPitch] = useState<string>('-18%');
+  const [rate, setRate] = useState<string>('108%');
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
-  const [loadingPersonaKey, setLoadingPersonaKey] = useState<string | null>(null);
   const [customText, setCustomText] = useState<string>(
-    'हाँ बॉस, बोलिए क्या मदद करूँ? आपका AI असिस्टेंट बिल्कुल तैयार है। आपकी हर आज्ञा का पालन होगा।'
+    'Haan boss, boliye kya madad karoon? Data analyze ho gaya hai, all systems ready hain.'
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Load saved voice preference
+    // Load saved Tony config
     const saved = localStorage.getItem('selected_ai_voice');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.voiceKey) setSelectedVoiceKey(parsed.voiceKey);
+        if (parsed.voiceKey === 'Tony-US' || parsed.voiceKey === 'Tony') {
+          setVoiceMode(parsed.voiceKey);
+        }
+        if (parsed.pitch) setPitch(parsed.pitch);
+        if (parsed.rate) setRate(parsed.rate);
       } catch (e) {
         console.error(e);
       }
     }
   }, []);
 
-  const playVoice = (persona: VoicePersona, textToPlay?: string) => {
+  const playTony = (textToPlay?: string, modeOverride?: 'Tony' | 'Tony-US') => {
     stopPlayback();
-    const text = textToPlay || persona.sampleText;
-    setLoadingPersonaKey(persona.voiceKey);
+    const text = textToPlay || customText;
+    const mode = modeOverride || voiceMode;
+
     setIsLoadingAudio(true);
 
-    const url = `/api/tts?voice=${encodeURIComponent(persona.voiceKey)}&text=${encodeURIComponent(
-      text
-    )}`;
+    const url = `/api/tts?voice=${encodeURIComponent(mode)}&pitch=${encodeURIComponent(
+      pitch
+    )}&rate=${encodeURIComponent(rate)}&text=${encodeURIComponent(text)}`;
 
     const audio = new Audio(url);
     audioRef.current = audio;
 
     audio.oncanplaythrough = () => {
       setIsLoadingAudio(false);
-      setLoadingPersonaKey(null);
-      setPlayingKey(persona.voiceKey);
+      setIsPlaying(true);
       audio.play().catch(() => {
-        setPlayingKey(null);
+        setIsPlaying(false);
         setIsLoadingAudio(false);
       });
     };
 
     audio.onended = () => {
-      setPlayingKey(null);
+      setIsPlaying(false);
       audioRef.current = null;
     };
 
     audio.onerror = () => {
-      setPlayingKey(null);
+      setIsPlaying(false);
       setIsLoadingAudio(false);
-      setLoadingPersonaKey(null);
       audioRef.current = null;
     };
 
@@ -227,43 +97,34 @@ export default function VoiceStudio() {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    setPlayingKey(null);
+    setIsPlaying(false);
     setIsLoadingAudio(false);
-    setLoadingPersonaKey(null);
   };
 
-  const handleSelectVoice = (persona: VoicePersona) => {
-    setSelectedVoiceKey(persona.voiceKey);
-
+  const handleSaveTony = () => {
     const config = {
-      id: persona.id,
-      name: persona.name,
-      voiceKey: persona.voiceKey,
-      engine: persona.engine,
+      id: 'tony-ai',
+      name: 'Tony',
+      voiceKey: voiceMode,
+      pitch,
+      rate,
     };
     localStorage.setItem('selected_ai_voice', JSON.stringify(config));
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
 
-    // Audition confirmation in the selected voice!
-    const isDesi = persona.voiceKey === 'Kabir' || persona.voiceKey === 'Aditi';
-    const confirmMsg = isDesi
-      ? 'आवाज़ सेट हो गई है बॉस! अब से इसी आवाज़ में बात होगी।'
-      : `Voice locked boss! All systems operational in ${persona.name} voice.`;
-    playVoice(persona, confirmMsg);
-  };
+    const confirmMsg =
+      voiceMode === 'Tony'
+        ? 'Aawaz lock ho gayi hai boss! Main Tony hoon, ab se isi voice me baat hogi.'
+        : 'Voice locked boss! Tony AI assistant is online and operational.';
 
-  const handleCustomPlay = () => {
-    const persona =
-      NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey) ||
-      NEURAL_VOICE_PERSONAS[0];
-    playVoice(persona, customText);
+    playTony(confirmMsg);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-3 sm:p-6">
       {/* Top Navbar */}
-      <header className="w-full max-w-3xl flex items-center justify-between pb-3 border-b border-slate-800">
+      <header className="w-full max-w-2xl flex items-center justify-between pb-3 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <Link
             href="/"
@@ -272,237 +133,260 @@ export default function VoiceStudio() {
             <ArrowLeft className="w-4 h-4" />
             <span>Assistant</span>
           </Link>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              Neural AI Voice Studio 🔊
-            </h1>
-            <p className="text-[11px] text-slate-400">
-              Zero Redirects • Zero API Key Required • Pure Amazon Polly Neural Audio
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                Tony Voice Control
+              </h1>
+              <p className="text-[10px] text-slate-400">Personal AI Assistant Voice</p>
+            </div>
           </div>
         </div>
 
-        {savedSuccess && (
-          <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl animate-bounce">
-            <Check className="w-4 h-4" /> Voice Locked!
-          </span>
-        )}
+        <button
+          onClick={handleSaveTony}
+          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer"
+        >
+          {savedSuccess ? (
+            <>
+              <Check className="w-3.5 h-3.5 stroke-[3]" /> Saved!
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5 fill-black" /> Lock Tony Voice
+            </>
+          )}
+        </button>
       </header>
 
       {/* Main Container */}
-      <main className="w-full max-w-3xl flex-1 flex flex-col mt-4 space-y-4">
-        {/* Custom Text Audition Playground Card */}
-        <section className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              Live Hinglish Audition Box (Kuch Bhi Likh Kar Suniye)
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">
-              Selected:{' '}
-              <strong className="text-cyan-400">
-                {NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey)?.name}
-              </strong>
-            </span>
-          </div>
+      <main className="w-full max-w-2xl mt-5 space-y-4">
+        {/* Tony Hero Card */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border-2 border-amber-500/50 shadow-2xl shadow-amber-500/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="flex gap-2 items-center">
-            <input
-              type="text"
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value)}
-              placeholder="Hinglish ya Hindi me kuch bhi likhein..."
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-500 transition font-medium"
-            />
+          <div className="flex items-start justify-between relative z-10">
+            <div className="flex items-center gap-3.5">
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-500 flex items-center justify-center shadow-xl shadow-amber-500/30">
+                  <Bot className="w-8 h-8 text-black" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-extrabold text-white tracking-tight">Tony</h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                    Your AI Assistant ⚡
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Fast, confident & tech-savvy male AI. Speaks crystal-clear Hinglish.
+                </p>
+              </div>
+            </div>
+
             <button
-              onClick={playingKey ? stopPlayback : handleCustomPlay}
+              onClick={() => (isPlaying ? stopPlayback() : playTony())}
               disabled={isLoadingAudio}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95 transition cursor-pointer disabled:opacity-50"
+              className={`p-3 rounded-2xl border transition shadow-lg cursor-pointer flex items-center justify-center ${
+                isPlaying
+                  ? 'bg-amber-500 text-black border-amber-400 animate-pulse'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-amber-400 border-slate-700'
+              }`}
+              title="Test Tony Audio"
             >
               {isLoadingAudio ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : isPlaying ? (
+                <Square className="w-5 h-5 fill-current" />
+              ) : (
+                <Play className="w-5 h-5 fill-current ml-0.5" />
+              )}
+            </button>
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="mt-5 grid grid-cols-2 gap-2.5 pt-4 border-t border-slate-800/80">
+            <button
+              onClick={() => {
+                setVoiceMode('Tony');
+                playTony(undefined, 'Tony');
+              }}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                voiceMode === 'Tony'
+                  ? 'bg-amber-500/15 border-amber-500 text-white shadow-md shadow-amber-500/10'
+                  : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Tony Hinglish
+                </span>
+                {voiceMode === 'Tony' && <Check className="w-3.5 h-3.5 text-amber-400 stroke-[3]" />}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                100% natural, crystal-clear Hinglish. Clean Hindi + English tech terms.
+              </p>
+            </button>
+
+            <button
+              onClick={() => {
+                setVoiceMode('Tony-US');
+                playTony(undefined, 'Tony-US');
+              }}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                voiceMode === 'Tony-US'
+                  ? 'bg-cyan-500/15 border-cyan-500 text-white shadow-md shadow-cyan-500/10'
+                  : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-cyan-400" /> Tony Stark (US)
+                </span>
+                {voiceMode === 'Tony-US' && <Check className="w-3.5 h-3.5 text-cyan-400 stroke-[3]" />}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                Original American accent. Best for pure English commands.
+              </p>
+            </button>
+          </div>
+
+          {/* Sliders: Pitch & Speed */}
+          <div className="mt-4 pt-3 border-t border-slate-800/60 grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <div className="flex items-center justify-between text-slate-400 mb-1.5 text-[11px]">
+                <span className="flex items-center gap-1">
+                  <Sliders className="w-3 h-3 text-amber-400" /> Aawaz (Pitch)
+                </span>
+                <span className="text-amber-400 font-mono font-bold">
+                  {pitch === '-22%' ? 'Deep Male' : pitch === '-18%' ? 'Confident' : 'Sharp Tech'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { label: 'Deep', val: '-22%' },
+                  { label: 'Optimal', val: '-18%' },
+                  { label: 'Sharp', val: '-12%' },
+                ].map((item) => (
+                  <button
+                    key={item.val}
+                    onClick={() => {
+                      setPitch(item.val);
+                      playTony();
+                    }}
+                    className={`py-1 rounded-lg border text-[10px] font-bold transition cursor-pointer ${
+                      pitch === item.val
+                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-slate-400 mb-1.5 text-[11px]">
+                <span className="flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-amber-400" /> Speed (Rate)
+                </span>
+                <span className="text-amber-400 font-mono font-bold">
+                  {rate === '112%' ? 'Fast' : rate === '108%' ? 'Crisp' : 'Normal'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { label: '1.0x', val: '100%' },
+                  { label: '1.1x', val: '108%' },
+                  { label: '1.15x', val: '112%' },
+                ].map((item) => (
+                  <button
+                    key={item.val}
+                    onClick={() => {
+                      setRate(item.val);
+                      playTony();
+                    }}
+                    className={`py-1 rounded-lg border text-[10px] font-bold transition cursor-pointer ${
+                      rate === item.val
+                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Audition Box */}
+        <div className="p-4 rounded-3xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-amber-400" /> Tony Se Kuch Bhi Bolwayein
+            </label>
+            <span className="text-[10px] text-slate-500 font-mono">Realtime Speech</span>
+          </div>
+
+          <div className="relative">
+            <textarea
+              value={customText}
+              onChange={(e) => setCustomText(e.target.value)}
+              rows={3}
+              placeholder="Hinglish ya English me likhein..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/80 transition resize-none leading-relaxed"
+            />
+
+            <button
+              onClick={() => (isPlaying ? stopPlayback() : playTony(customText))}
+              disabled={isLoadingAudio || !customText.trim()}
+              className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition flex items-center gap-1 shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {isLoadingAudio ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : isPlaying ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-black" /> Generating...
-                </>
-              ) : playingKey ? (
-                <>
-                  <Square className="w-4 h-4 fill-black" /> Stop
+                  <Square className="w-3.5 h-3.5 fill-black" /> Stop
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 fill-black" /> Suniye
+                  <Play className="w-3.5 h-3.5 fill-black" /> Tony Sunao
                 </>
               )}
             </button>
           </div>
 
           {/* Quick Audition Chips */}
-          <div className="mt-3 space-y-2">
-            {/* Pure Hindi Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                🇮🇳 शुद्ध हिन्दी:
-              </span>
-              {PURE_HINDI_QUICK_PROMPTS.map((prompt, idx) => (
-                <button
-                  key={`hi-${idx}`}
-                  onClick={() => {
-                    setCustomText(prompt);
-                    const persona =
-                      NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey) ||
-                      NEURAL_VOICE_PERSONAS[0];
-                    playVoice(persona, prompt);
-                  }}
-                  className="text-[10px] bg-slate-950 hover:bg-slate-800 text-amber-200/90 hover:text-white px-2 py-1 rounded-lg border border-amber-500/20 hover:border-amber-500/40 transition cursor-pointer"
-                >
-                  &quot;{prompt.slice(0, 26)}...&quot;
-                </button>
-              ))}
-            </div>
-
-            {/* Hinglish Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                <MessageSquare className="w-3 h-3" /> Hinglish:
-              </span>
-              {HINGLISH_QUICK_PROMPTS.map((prompt, idx) => (
-                <button
-                  key={`hing-${idx}`}
-                  onClick={() => {
-                    setCustomText(prompt);
-                    const persona =
-                      NEURAL_VOICE_PERSONAS.find((p) => p.voiceKey === selectedVoiceKey) ||
-                      NEURAL_VOICE_PERSONAS[0];
-                    playVoice(persona, prompt);
-                  }}
-                  className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded-lg border border-slate-800 transition cursor-pointer"
-                >
-                  &quot;{prompt.slice(0, 26)}...&quot;
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Voices Grid */}
-        <section className="space-y-2.5">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-              Real Neural Voice Library ({NEURAL_VOICE_PERSONAS.length})
-            </h2>
-            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
-              Zero Redirects • 100% Free ✅
+          <div className="mt-3">
+            <span className="text-[10px] text-slate-500 font-bold block mb-1.5">
+              ⚡ Quick Test Prompts (Click karke suniye):
             </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {NEURAL_VOICE_PERSONAS.map((persona) => {
-              const Icon = persona.icon;
-              const isSelected = selectedVoiceKey === persona.voiceKey;
-              const isThisPlaying = playingKey === persona.voiceKey;
-              const isThisLoading = loadingPersonaKey === persona.voiceKey && isLoadingAudio;
-
-              return (
-                <div
-                  key={persona.id}
-                  className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
-                    isSelected
-                      ? 'bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border-2 border-amber-400/80 shadow-xl shadow-amber-500/10 ring-1 ring-amber-400/30'
-                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
-                  }`}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {TONY_QUICK_PROMPTS.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setCustomText(prompt);
+                    playTony(prompt);
+                  }}
+                  className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl border border-slate-800 hover:border-amber-500/40 transition cursor-pointer"
                 >
-                  <div>
-                    {/* Header: Icon, Name & Badge */}
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${persona.color} flex items-center justify-center shadow-md`}
-                        >
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                            {persona.name}
-                          </h3>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/50 px-1.5 py-0.2 rounded border border-cyan-800/40">
-                              {persona.engine}
-                            </span>
-                            <span className="text-[10px] font-mono text-slate-400">
-                              {persona.badge}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {isSelected && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-bold">
-                          ACTIVE ⭐
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-slate-400 mb-3 leading-relaxed">{persona.desc}</p>
-
-                    {/* Sample Hinglish Text Preview */}
-                    <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 text-[11px] text-emerald-300 font-medium italic mb-3">
-                      &quot;{persona.sampleText}&quot;
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60">
-                    <button
-                      onClick={() => (isThisPlaying ? stopPlayback() : playVoice(persona))}
-                      disabled={isLoadingAudio && !isThisLoading}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                        isThisPlaying
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          : isThisLoading
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                      }`}
-                    >
-                      {isThisLoading ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                          <span>Streaming MP3...</span>
-                        </>
-                      ) : isThisPlaying ? (
-                        <>
-                          <Square className="w-3.5 h-3.5 fill-red-400" />
-                          <span>Stop</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5 fill-slate-200" />
-                          <span>Sunein (Play)</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handleSelectVoice(persona)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
-                          : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40'
-                      }`}
-                    >
-                      {isSelected ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" /> Selected
-                        </>
-                      ) : (
-                        <>Select Voice</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                  &quot;{prompt.slice(0, 36)}...&quot;
+                </button>
+              ))}
+            </div>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );

@@ -60,18 +60,21 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const rawText = url.searchParams.get('text') || 'Hello boss, all systems online.';
-    const voice = url.searchParams.get('voice') || 'Kabir';
+    const voice = url.searchParams.get('voice') || 'Tony';
+    const pitchParam = url.searchParams.get('pitch') || '-18%';
+    const rateParam = url.searchParams.get('rate') || '108%';
 
     let textToSynthesize = rawText;
-    let pollyLang = voice;
+    let pollyLang = 'Aditi';
 
-    // 1. Indian Bilingual Voices (Kabir - Desi Male, Aditi - Desi Female)
-    // For 100% natural, authentic Hindi/Hinglish without accent distortion,
-    // convert Roman Hinglish to Hindi Devanagari script via fast Groq LLM
-    if (voice === 'Kabir' || voice === 'Aditi') {
-      pollyLang = 'Aditi';
-
-      // If text contains Roman letters, check if it needs conversion to Devanagari
+    // 1. Raw American English Voice (Tony-US / Matthew)
+    if (voice === 'Tony-US' || voice === 'Matthew-US') {
+      pollyLang = 'Matthew';
+      textToSynthesize = phonetizeForEnglishVoice(rawText);
+    } else {
+      // 2. Default Flagship Voice: TONY (Fast, confident, natural Hinglish male AI)
+      // Converts Roman Hinglish into clean Devanagari acoustics so Tony pronounces
+      // Hindi words with 100% crystal-clear clarity, and keeps English loanwords crisp.
       if (/[a-zA-Z]/.test(rawText)) {
         try {
           const groqKey = process.env.GROQ_API_KEY;
@@ -88,7 +91,7 @@ export async function GET(req: NextRequest) {
                   {
                     role: 'system',
                     content:
-                      'If the input contains conversational Roman Hinglish or Hindi words, convert it into natural Hindi Devanagari script for speech synthesis. Keep pure English sentences/words (boss, AI, system, ready, status) in English or standard Devanagari. Output ONLY the converted text, no explanation.',
+                      'If the input contains conversational Roman Hinglish or Hindi words, convert it into natural Hindi Devanagari script for speech synthesis. Keep pure English sentences/words (boss, AI, system, ready, status, data, analyze) in English or standard Devanagari. Output ONLY the converted text, no explanation.',
                   },
                   { role: 'user', content: rawText },
                 ],
@@ -107,17 +110,8 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Kabir Persona: Masculine tech tone via SSML prosody pitch reduction
-      if (voice === 'Kabir') {
-        textToSynthesize = `<prosody pitch="-24%" rate="103%">${textToSynthesize}</prosody>`;
-      }
-    } else {
-      // English-only voices (Matthew/Tony, Brian/Jarvis, Joey, Russell)
-      const isEnglishOnlyVoice =
-        voice === 'Matthew' || voice === 'Brian' || voice === 'Joey' || voice === 'Russell';
-      textToSynthesize = isEnglishOnlyVoice
-        ? phonetizeForEnglishVoice(rawText)
-        : rawText;
+      // Tony Persona: Masculine confident pitch + crisp fast rate
+      textToSynthesize = `<prosody pitch="${pitchParam}" rate="${rateParam}">${textToSynthesize}</prosody>`;
     }
 
     // 2. Try Amazon Polly neural speech endpoint (via server-side proxy)

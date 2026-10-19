@@ -19,6 +19,7 @@ import {
   PlusCircle,
   CheckCircle2,
   Volume2,
+  Zap,
 } from 'lucide-react';
 
 interface Transcription {
@@ -475,7 +476,7 @@ export default function Home() {
       return;
     }
 
-    let voiceKey = 'Kabir';
+    let voiceKey = 'Tony';
     try {
       const saved = localStorage.getItem('selected_ai_voice');
       if (saved) {
@@ -525,10 +526,10 @@ export default function Home() {
           <Link
             href="/voices"
             className="p-1.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition flex items-center gap-1.5 text-xs font-bold shadow-sm"
-            title="AI Voice Studio"
+            title="Tony AI Voice Control"
           >
-            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Voice Studio 🔊</span>
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>Tony Voice ⚡</span>
           </Link>
 
           <button
