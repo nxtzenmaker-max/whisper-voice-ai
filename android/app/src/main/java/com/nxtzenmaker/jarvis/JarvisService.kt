@@ -19,7 +19,7 @@ import java.util.ArrayDeque
 class JarvisService : Service() {
 
     companion object {
-        const val CHANNEL_ID = "jarvis_voice_channel"
+        const val CHANNEL_ID = "rox_voice_channel"
         const val NOTIFICATION_ID = 1001
 
         const val ACTION_START_LISTENING = "com.nxtzenmaker.jarvis.START_LISTENING"
@@ -70,7 +70,7 @@ class JarvisService : Service() {
 
         acquireWakeLock()
         createNotificationChannel()
-        startInForeground("🟢 Jarvis Active • Listening for your voice...")
+        startInForeground("🟢 ROX Active • Listening for your voice...")
     }
 
     private fun acquireWakeLock() {
@@ -78,7 +78,7 @@ class JarvisService : Service() {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "Jarvis:BackgroundListeningWakeLock"
+                "Rox:BackgroundListeningWakeLock"
             ).apply {
                 acquire(12 * 60 * 60 * 1000L) // 12 hours safe window
             }
@@ -117,10 +117,10 @@ class JarvisService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Jarvis Background Assistant",
+                "ROX Background Assistant",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Background Voiceprint Biometrics & Voice Assistant Active"
+                description = "ROX Voiceprint Biometrics & Always-On Ear"
                 setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
@@ -137,7 +137,7 @@ class JarvisService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("JARVIS Voice AI")
+            .setContentTitle("ROX Voice AI")
             .setContentText(statusText)
             .setSmallIcon(R.drawable.ic_shield_check)
             .setContentIntent(pendingIntent)
@@ -195,7 +195,7 @@ class JarvisService : Service() {
                 }
 
                 audioRecord?.startRecording()
-                updateNotification("🟢 Jarvis Active • Listening for your voice...")
+                updateNotification("🟢 ROX Active • Listening for your voice...")
 
                 val frameSize = 1024 // ~64ms
                 val buffer = ShortArray(frameSize)
@@ -214,7 +214,7 @@ class JarvisService : Service() {
                 val minSpeechFrames = 12      // ~0.76s minimum utterance
 
                 while (isActive && isListeningLoopActive) {
-                    // Echo Prevention: If Jarvis is speaking, pause processing mic input
+                    // Echo Prevention: If ROX is speaking, pause processing mic input
                     if (audioPlayer.isPlayingAudio()) {
                         delay(150)
                         continue
@@ -274,7 +274,7 @@ class JarvisService : Service() {
 
                                 processCapturedUtterance(speechChunks)
                             } else {
-                                updateNotification("🟢 Jarvis Active • Listening for your voice...")
+                                updateNotification("🟢 ROX Active • Listening for your voice...")
                                 broadcastStatus("IDLE", "Standby", 0.0, 0)
                             }
 
@@ -325,7 +325,7 @@ class JarvisService : Service() {
         wavFile.delete()
 
         if (!res.success) {
-            updateNotification("🟢 Jarvis Active • Listening for your voice...")
+            updateNotification("🟢 ROX Active • Listening for your voice...")
             broadcastStatus("ERROR", res.errorMessage ?: "Verification failed", 0.0, 0)
             return@withContext
         }
@@ -336,25 +336,25 @@ class JarvisService : Service() {
             broadcastStatus("OWNER_VERIFIED", res.text, res.matchPercent, res.pitch)
 
             // Test acknowledgment reply (Strictly no LLM as requested)
-            val replyText = "Haan boss, aapki aawaz verify ho gayi hai. Sun raha hoon."
+            val replyText = "Haan boss, Rox sun raha hai. Boliye."
 
             val ttsUrl = apiClient.getTtsAudioUrl(replyText)
             withContext(Dispatchers.Main) {
                 audioPlayer.playUrl(
                     url = ttsUrl,
                     onStart = {
-                        updateNotification("🗣️ Jarvis Speaking (Prabhat +20%)...")
+                        updateNotification("🗣️ ROX Speaking (Prabhat +20%)...")
                         broadcastStatus("SPEAKING", replyText, res.matchPercent, res.pitch)
                     },
                     onComplete = {
                         serviceScope.launch {
                             delay(400) // Clear room echo
-                            updateNotification("🟢 Jarvis Active • Listening for your voice...")
+                            updateNotification("🟢 ROX Active • Listening for your voice...")
                             broadcastStatus("IDLE", "Standby", 0.0, 0)
                         }
                     },
                     onError = {
-                        updateNotification("🟢 Jarvis Active • Listening for your voice...")
+                        updateNotification("🟢 ROX Active • Listening for your voice...")
                         broadcastStatus("IDLE", "Standby", 0.0, 0)
                     }
                 )
@@ -365,7 +365,7 @@ class JarvisService : Service() {
             broadcastStatus("STRANGER_BLOCKED", res.speakerName, res.matchPercent, res.pitch)
 
             delay(1200)
-            updateNotification("🟢 Jarvis Active • Listening for your voice...")
+            updateNotification("🟢 ROX Active • Listening for your voice...")
             broadcastStatus("IDLE", "Standby", 0.0, 0)
         }
     }

@@ -214,7 +214,7 @@ class MainActivity : AppCompatActivity() {
                 val pitchInfo = if (pitch > 0) "Pitch: ${pitch}Hz • " else ""
                 binding.tvBiometricDetail.text = "${pitchInfo}Owner Voice Confirmed (${matchPercent}%)"
                 binding.tvYouSpoke.text = "\"$text\""
-                binding.tvJarvisReply.text = "\"Haan boss, aapki aawaz verify ho gayi hai. Sun raha hoon.\""
+                binding.tvJarvisReply.text = "\"Haan boss, Rox sun raha hai. Boliye.\""
                 binding.tvStatusSub.text = "Prabhat (+20% speed) Speaking..."
             }
             "STRANGER_BLOCKED" -> {
@@ -232,7 +232,7 @@ class MainActivity : AppCompatActivity() {
                 binding.tvMicStatus.text = "Tap to Speak"
             }
             "SPEAKING" -> {
-                binding.tvMicStatus.text = "Jarvis Speaking..."
+                binding.tvMicStatus.text = "ROX Speaking..."
             }
             "IDLE" -> {
                 binding.tvMicStatus.text = "Tap to Speak"
@@ -332,9 +332,9 @@ class MainActivity : AppCompatActivity() {
                 binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Owner identity confirmed." }}"
 
                 val replyText = if (res.isNewRegistration) {
-                    "Sample save ho gaya boss. Ab Jarvis aapko pehchan lega."
+                    "Sample save ho gaya boss. Ab Rox aapko pehchan lega."
                 } else {
-                    "Haan boss, aapki aawaz verify ho gayi hai. System all green hai."
+                    "Haan boss, Rox online hai. Aapki aawaz verify ho gayi hai."
                 }
 
                 binding.tvJarvisReply.text = "\"$replyText\""
@@ -344,7 +344,7 @@ class MainActivity : AppCompatActivity() {
                 audioPlayer.playUrl(
                     url = ttsUrl,
                     onStart = {
-                        binding.tvMicStatus.text = "Jarvis Speaking..."
+                        binding.tvMicStatus.text = "ROX Speaking..."
                     },
                     onComplete = {
                         binding.tvMicStatus.text = "Tap to Speak"
