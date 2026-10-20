@@ -1,11 +1,12 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#09080e">
 <title>Awaaz Orb • Prabhat AI Voice</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap">
 <style>
-/* Layout: one column. Header strip, an orb stage that takes all spare height with the
-   spoken words under it, then band meters and a control dock. The orb is the only loud thing.
-   Single dark look on purpose: the orb is a light source. */
 :root{
   --ink:#09080e; --panel:#110f19; --well:#0c0b12; --line:#282434;
   --text:#ece8f4; --dim:#948da3; --faint:#5a5468;
@@ -14,69 +15,155 @@
   --f-body:'Hanken Grotesk','Noto Sans Devanagari',system-ui,sans-serif;
   --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
   color-scheme:dark;
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
 }
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:var(--ink);color:var(--text);font:400 14px/1.45 var(--f-body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-button,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--hi);outline-offset:2px}
+*,*::before,*::after{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent !important;
+  -webkit-touch-callout:none !important;
+}
+html,body{
+  height:100%;
+  height:100dvh;
+  max-height:100dvh;
+  width:100%;
+  overflow:hidden;
+  position:fixed;
+  inset:0;
+  touch-action:manipulation;
+  overscroll-behavior:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--text);
+  font:400 14px/1.4 var(--f-body);
+  -webkit-font-smoothing:antialiased;
+}
+:focus,:focus-visible,:active{
+  outline:none !important;
+  -webkit-tap-highlight-color:transparent !important;
+}
+button,select,a,.tab,.btn,.chip{
+  -webkit-tap-highlight-color:transparent !important;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:manipulation;
+  outline:none !important;
+  font:inherit;
+  color:inherit;
+}
+textarea,input{
+  user-select:text !important;
+  -webkit-user-select:text !important;
+  -webkit-touch-callout:default !important;
+  touch-action:pan-y !important;
+  font:inherit;
+  color:inherit;
+}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-.app{height:100%;max-width:880px;margin-inline:auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;
-  padding-block:10px;
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{
+  height:100%;
+  height:100dvh;
+  max-height:100dvh;
+  max-width:880px;
+  margin-inline:auto;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:8px;
+  padding-block:8px;
+  padding-left:max(12px,env(safe-area-inset-left,0px));
+  padding-right:max(12px,env(safe-area-inset-right,0px));
+  overflow:hidden;
+}
 
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.mark{font:800 15px/1 var(--f-display);letter-spacing:.24em;text-transform:uppercase}
-.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;
-  font:500 10.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mark{font:800 14px/1 var(--f-display);letter-spacing:.18em;text-transform:uppercase}
+.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 9px;
+  font:500 10px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap;
+}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--faint)}
 .chip[data-live="1"]{color:var(--text)}
 .chip[data-live="1"] .dot{background:var(--mid);box-shadow:0 0 8px var(--mid)}
 
-.stage{min-height:0;display:grid;grid-template-rows:minmax(220px,1fr) auto;gap:4px}
+.stage{min-height:0;display:grid;grid-template-rows:minmax(120px,1fr) auto;gap:4px}
 .view{position:relative;min-height:0}
 .view canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #ring{pointer-events:none}
-.view.drag::after{content:"Audio yahan chhodo";position:absolute;inset:8px;border:1px dashed var(--mid);border-radius:16px;
-  display:grid;place-items:center;font:600 14px var(--f-body);color:var(--mid);background:rgba(9,8,14,.6)}
+.view.drag::after{
+  content:"Audio yahan chhodo";position:absolute;inset:8px;border:1px dashed var(--mid);border-radius:16px;
+  display:grid;place-items:center;font:600 14px var(--f-body);color:var(--mid);background:rgba(9,8,14,.6);
+}
 .nogl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);padding:24px}
 
-.cap{margin:0;min-height:3.1em;max-height:5.2em;overflow-y:auto;scrollbar-width:none;text-align:center;font:700 clamp(17px,4.4vw,25px)/1.25 var(--f-display);text-wrap:balance}
+.cap{
+  margin:0;min-height:2.2em;max-height:3.4em;overflow-y:auto;scrollbar-width:none;
+  text-align:center;font:700 clamp(14px,3.8vw,22px)/1.25 var(--f-display);text-wrap:balance;
+}
 .cap .w{color:var(--faint);transition:color .12s}
 .cap .w.done{color:#a59eb5}
 .cap .w.on{color:var(--text)}
-.cap.hint{font:400 14px/1.5 var(--f-body);color:var(--dim)}
+.cap.hint{font:400 13px/1.4 var(--f-body);color:var(--dim)}
 
-.bottom{display:grid;gap:12px}
-.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.m{display:grid;gap:7px;min-width:0}
-.m .lab{display:flex;justify-content:space-between;gap:6px;font:500 10.5px/1 var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.bottom{display:grid;gap:8px}
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.m{display:grid;gap:5px;min-width:0}
+.m .lab{display:flex;justify-content:space-between;gap:4px;font:500 9.5px/1 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
 .m .lab span:last-child{letter-spacing:0;text-transform:none;white-space:nowrap}
-.bar{height:5px;border-radius:3px;background:#1b1826;overflow:hidden}
-.bar i{display:block;width:100%;height:100%;background:var(--c);transform:scaleX(0);transform-origin:0 50%;border-radius:3px}
-.read{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;font:500 10.5px/1 var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
-.read span{display:grid;gap:6px;min-width:0}
-.read b{display:block;font:500 20px/1 var(--f-mono);letter-spacing:0;text-transform:none;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:4px;border-radius:2px;background:#1b1826;overflow:hidden}
+.bar i{display:block;width:100%;height:100%;background:var(--c);transform:scaleX(0);transform-origin:0 50%;border-radius:2px}
 
-.dock{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;display:grid;gap:10px}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--well);border-radius:10px;padding:4px}
-.tab{appearance:none;border:0;background:transparent;color:var(--dim);font:600 13px/1 var(--f-body);padding:11px 6px;border-radius:7px;cursor:pointer}
+.read{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font:500 9.5px/1 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.read span{display:grid;gap:4px;min-width:0}
+.read b{display:block;font:500 16px/1 var(--f-mono);letter-spacing:0;text-transform:none;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.dock{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:8px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--well);border-radius:8px;padding:3px}
+.tab{border:0;background:transparent;color:var(--dim);font:600 12px/1 var(--f-body);padding:8px 4px;border-radius:6px;cursor:pointer}
 .tab[aria-selected="true"]{background:#221f2f;color:var(--text)}
-.pane{display:grid;gap:10px}
+.pane{display:grid;gap:8px}
 .pane[hidden]{display:none}
-textarea{width:100%;resize:none;background:var(--well);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:400 14px/1.4 var(--f-body)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.btn{appearance:none;min-height:44px;border:1px solid var(--line);background:#1a1726;color:var(--text);border-radius:10px;padding:0 16px;font:600 13px/1 var(--f-body);cursor:pointer}
+textarea{width:100%;resize:none;background:var(--well);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font:400 13px/1.35 var(--f-body)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn{appearance:none;min-height:38px;border:1px solid var(--line);background:#1a1726;color:var(--text);border-radius:8px;padding:0 14px;font:600 12.5px/1 var(--f-body);cursor:pointer}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.primary{background:var(--mid);border-color:var(--mid);color:#1c1204}
 .btn.stop{margin-left:auto;border-color:var(--lo);color:var(--lo);background:transparent}
-select.btn{max-width:100%;padding-right:8px}
-.note{margin:0;color:var(--dim);font-size:12.5px;line-height:1.5}
+select.btn{max-width:160px;padding-right:6px;font-size:11.5px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.note{margin:0;color:var(--dim);font-size:11.5px;line-height:1.4}
 .note b{color:var(--text);font-weight:500}
+
+@media (max-width: 480px){
+  .app{padding-block:6px;padding-inline:8px;gap:6px}
+  .mark{font-size:12.5px;letter-spacing:.08em}
+  #chipSig{display:none}
+  .chip{padding:4px 7px;font-size:9px;gap:5px}
+  .cap{font-size:14px;min-height:2em;max-height:3em}
+  .meters,.read{gap:5px}
+  .read b{font-size:15px}
+  .dock{padding:6px;gap:6px}
+  .tab{font-size:11px;padding:6px 2px}
+  textarea{font-size:12px;padding:6px 8px}
+  .btn{min-height:36px;padding:0 10px;font-size:12px}
+  select.btn{max-width:130px;font-size:11px}
+}
+
+@media (max-height: 720px){
+  .stage{grid-template-rows:minmax(90px,1fr) auto}
+  .cap{min-height:1.9em;max-height:2.6em;font-size:13px}
+  .meters,.read{gap:4px}
+  .read b{font-size:14px}
+}
 </style>
+</head>
+<body>
 <div class="app">
   <header class="top">
     <div style="display:flex;align-items:center;gap:10px">
@@ -119,7 +206,7 @@ select.btn{max-width:100%;padding-right:8px}
 
       <div class="pane" id="paneSay" role="tabpanel" aria-labelledby="tabSay">
         <label class="sr" for="say">Jo AI bolega</label>
-        <textarea id="say" rows="3" maxlength="400">Namaste! Main bol raha hoon, aur ye orb meri awaaz ki frequency ke hisaab se badal raha hai. Bass se ubhaar, high se kampan.</textarea>
+        <textarea id="say" rows="2" maxlength="400">Namaste! Main bol raha hoon, aur ye orb meri awaaz ki frequency ke hisaab se badal raha hai. Bass se ubhaar, high se kampan.</textarea>
         <div class="row">
           <button class="btn primary" id="btnSay" type="button">Bolo</button>
           <button class="btn" id="btnAsk" type="button" hidden>AI se pucho</button>
@@ -961,6 +1048,37 @@ function init(){
   last = performance.now(); requestAnimationFrame(frame);
 }
 init();
+
+// Mobile: Prevent pinch zoom, double-tap zoom, and long-press selection/highlight
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+document.addEventListener('gestureend', e => e.preventDefault(), { passive: false });
+
+// Block 2-finger pinch zoom on Android Chrome & Safari
+document.addEventListener('touchmove', e => {
+  if (e.touches && e.touches.length > 1) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Prevent double-tap to zoom
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = performance.now();
+  if (now - lastTouchEnd <= 300) {
+    if (!['TEXTAREA', 'INPUT'].includes(e.target.tagName)) {
+      e.preventDefault();
+    }
+  }
+  lastTouchEnd = now;
+}, { passive: false });
+
+// Prevent long-press context menu / magnifier / text selection highlight on all UI elements (keep textarea usable)
+document.addEventListener('contextmenu', e => {
+  if (!['TEXTAREA', 'INPUT'].includes(e.target.tagName)) {
+    e.preventDefault();
+  }
+});
 </script>
 
 </body></html>
