@@ -3,7 +3,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Jarvis Futuristic Dark Theme Palette -->
     <color name="bg_dark">#0B0F19</color>
     <color name="bg_card">#161F30</color>
     <color name="bg_card_border">#1E293B</color>
@@ -23,4 +22,9 @@
     <color name="text_primary">#F8FAFC</color>
     <color name="text_secondary">#94A3B8</color>
     <color name="text_muted">#64748B</color>
+
+    <color name="accent_gold">#FFFFB84A</color>
+    <color name="accent_cyan">#FF5AD3FF</color>
+    <color name="line">#FF2A243D</color>
+    <color name="green_granted">#FF2ECC71</color>
 </resources>

@@ -181,6 +181,14 @@ class MainActivity : AppCompatActivity() {
             checkAndStartBackgroundListening()
             requestBatteryOptimizationExemption()
         }
+
+        // Prompt for Floating Overlay permission if needed for 3D Orb
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            try {
+                val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                startActivity(overlayIntent)
+            } catch (_: Exception) {}
+        }
     }
 
     @SuppressLint("BatteryLife")

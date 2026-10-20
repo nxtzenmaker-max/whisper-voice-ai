@@ -58,24 +58,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v1.6-apk
-          name: "ROX Voice Assistant Android APK (v1.6 - Pure Media & Zero Call Mode)"
+          tag_name: v1.7-apk
+          name: "ROX Voice Assistant Android APK (v1.7 - Floating 3D Orb, Quick Tile & Volume 3x)"
           body: |
-            ### 🎙️ ROX Voice Assistant Android APK (v1.6)
+            ### 🔮 ROX Voice Assistant Android APK (v1.7)
             
-            ✅ **Features**:
-            - 🤖 **Official Rebrand to ROX AI**: Your personalized Indian voice assistant.
-            - 🟢 **Continuous Background Listening (Always-On Ear)**: Works when phone is locked, app is in the background, or swiped from recent apps!
-            - ⚡ **Energy-Based Voice Activity Detector (VAD)**: Minimal battery usage; activates on speech.
-            - 🛡️ **Echo Prevention**: Automatically mutes the mic while ROX speaks to avoid self-triggering loops.
-            - 🔐 **Biometric Gatekeeper**: Strictly verifies owner vs stranger before responding.
-            - 🗣️ **Prabhat Voice (+20% speed)**: Natural Indian male voice replies.
+            ✅ **All New Features**:
+            - 🌐 **Floating Transparent 3D Orb Overlay**: Pops up directly over your current screen (WhatsApp, YouTube, Home Screen) with a completely transparent background!
+            - 🎛️ **Quick Settings Tile (Torch / Mute panel)**: Swipe down notification shade and tap **"Rox AI"** to summon Rox in 1 tap.
+            - 🔊 **Volume Down 3x Trigger**: Press Volume Down 3 times quickly anywhere on phone to activate with haptic feedback!
+            - 🗣️ **Voice Code Word Activation**: Rox says *"Rox activated, send your code with your voice to start"* -> say your code word (Default: `Rox 7`) -> full assistant unlocks!
+            - 🛡️ **Anti-Shutdown Protection**: Runs as a persistent foreground service. Only shuts down on your voice command (*"Rox close"*, *"Rox stop"*, *"Rox shutdown"*).
+            - 🎵 **Audio-Reactive 3D WebGL Orb**: Orb reacts dynamically to live voice frequencies and speech.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.
             2. Tap "Install" or "Update" on your Android device.
-            3. Open the app and ensure "Continuous Background Listening" is ON.
-            4. Lock your phone or swipe from recents, speak naturally, and ROX will reply!
+            3. Grant "Draw Over Other Apps", "Microphone", and "Volume 3x Trigger" in Accessibility.
+            4. Drag "Rox AI" into your Quick Settings panel!
           draft: false
           prerelease: false
           files: Rox-Voice-Assistant.apk

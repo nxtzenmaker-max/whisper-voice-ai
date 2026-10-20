@@ -5,4 +5,7 @@
     <string name="processing">Verifying Voiceprint…</string>
     <string name="prabhat_speaking">ROX is Speaking…</string>
     <string name="ready">ROX Ready</string>
+    <string name="tile_label">Rox AI</string>
+    <string name="accessibility_service_label">Rox Volume 3x Trigger</string>
+    <string name="accessibility_description">Press Volume Down 3 times quickly to summon the Rox AI Assistant floating orb.</string>
 </resources>
