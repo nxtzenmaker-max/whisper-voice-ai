@@ -940,7 +940,6 @@ $('btnAsk').addEventListener('click', async () => {
 
 /* ---------- ring: the same spectrum as a readout, low at the bottom, high at the top, mirrored ---------- */
 const rctx = ringCv.getContext('2d');
-const TICKS = [[100,'100 Hz'],[250,'250'],[500,'500'],[1000,'1k'],[2000,'2k'],[4000,'4k'],[8000,'8k']];
 const rampC = t => { const a = t < .5 ? COL.lo : COL.mid, b = t < .5 ? COL.mid : COL.hi, u = t < .5 ? t*2 : t*2 - 1; return [a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u, a[2]+(b[2]-a[2])*u]; };
 const rgba = (c, a) => 'rgba(' + Math.round(c[0]*255) + ',' + Math.round(c[1]*255) + ',' + Math.round(c[2]*255) + ',' + a + ')';
 function drawRing(spec, sx, sy){
@@ -961,10 +960,6 @@ function drawRing(spec, sx, sy){
       rctx.stroke();
     }
   }
-  rctx.fillStyle = 'rgba(148,141,163,.9)';
-  rctx.font = '500 ' + Math.round(9.5*DPR) + 'px "JetBrains Mono", ui-monospace, monospace';
-  rctx.textAlign = 'left'; rctx.textBaseline = 'middle';
-  for(const [f, lab] of TICKS){ const a = tOfHz(f)*Math.PI, rr = r0 + maxL + 9*DPR; rctx.fillText(lab, cx + Math.sin(a)*rr, cy + Math.cos(a)*rr); }
 }
 
 /* ---------- main loop ---------- */
