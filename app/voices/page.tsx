@@ -120,6 +120,13 @@ export default function PrabhatVoiceStudio() {
             <ArrowLeft className="w-4 h-4" />
             <span>Assistant</span>
           </Link>
+          <Link
+            href="/orb"
+            className="p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 transition flex items-center gap-1.5 text-xs font-bold shadow-sm"
+          >
+            <Activity className="w-3.5 h-3.5 text-purple-400" />
+            <span>Awaaz Orb 🔮</span>
+          </Link>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
               <Zap className="w-4 h-4 text-emerald-400" />

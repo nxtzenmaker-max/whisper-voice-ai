@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Volume2,
   Zap,
+  Activity,
 } from 'lucide-react';
 
 interface Transcription {
@@ -523,6 +524,15 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/orb"
+            className="p-1.5 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 transition flex items-center gap-1.5 text-xs font-bold shadow-sm"
+            title="Awaaz Orb 3D Audio Visualizer"
+          >
+            <Activity className="w-3.5 h-3.5 text-purple-400" />
+            <span>Awaaz Orb 🔮</span>
+          </Link>
+
           <Link
             href="/voices"
             className="p-1.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 transition flex items-center gap-1.5 text-xs font-bold shadow-sm"
