@@ -48,7 +48,7 @@ body{
   outline:none !important;
   -webkit-tap-highlight-color:transparent !important;
 }
-button,select,a,.tab,.btn,.chip{
+button,select,a,.btn,.chip{
   -webkit-tap-highlight-color:transparent !important;
   user-select:none;
   -webkit-user-select:none;
@@ -71,95 +71,93 @@ textarea,input{
   height:100%;
   height:100dvh;
   max-height:100dvh;
-  max-width:880px;
+  max-width:760px;
   margin-inline:auto;
   display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
-  gap:8px;
-  padding-block:8px;
-  padding-left:max(12px,env(safe-area-inset-left,0px));
-  padding-right:max(12px,env(safe-area-inset-right,0px));
+  grid-template-rows:auto 1fr auto;
+  gap:12px;
+  padding-block:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
   overflow:hidden;
 }
 
-.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.mark{font:800 14px/1 var(--f-display);letter-spacing:.18em;text-transform:uppercase}
-.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mark{font:800 15px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase}
+.chips{display:flex;gap:6px;align-items:center}
 .chip{
-  display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 9px;
-  font:500 10px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap;
+  display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;
+  font:500 10.5px/1 var(--f-mono);letter-spacing:.05em;color:var(--dim);white-space:nowrap;
+  background:rgba(255,255,255,0.02);
 }
-.dot{width:6px;height:6px;border-radius:50%;background:var(--faint)}
-.chip[data-live="1"]{color:var(--text)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--faint);transition:background .2s,box-shadow .2s}
+.chip[data-live="1"]{color:var(--text);border-color:rgba(255,184,74,0.35)}
 .chip[data-live="1"] .dot{background:var(--mid);box-shadow:0 0 8px var(--mid)}
 
-.stage{min-height:0;display:grid;grid-template-rows:minmax(120px,1fr) auto;gap:4px}
+.back-link{
+  text-decoration:none;display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--line);border-radius:999px;padding:6px 12px;
+  font:600 12px var(--f-body);color:var(--dim);background:var(--well);transition:all .15s;
+}
+.back-link:hover{color:var(--text);border-color:var(--faint)}
+
+.stage{min-height:0;display:grid;grid-template-rows:1fr auto;gap:8px}
 .view{position:relative;min-height:0}
 .view canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #ring{pointer-events:none}
 .view.drag::after{
   content:"Audio yahan chhodo";position:absolute;inset:8px;border:1px dashed var(--mid);border-radius:16px;
-  display:grid;place-items:center;font:600 14px var(--f-body);color:var(--mid);background:rgba(9,8,14,.6);
+  display:grid;place-items:center;font:600 14px var(--f-body);color:var(--mid);background:rgba(9,8,14,.7);
 }
 .nogl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);padding:24px}
 
 .cap{
-  margin:0;min-height:2.2em;max-height:3.4em;overflow-y:auto;scrollbar-width:none;
-  text-align:center;font:700 clamp(14px,3.8vw,22px)/1.25 var(--f-display);text-wrap:balance;
+  margin:0;min-height:1.8em;max-height:2.6em;overflow-y:auto;scrollbar-width:none;
+  text-align:center;font:600 clamp(13px,3.4vw,17px)/1.35 var(--f-display);text-wrap:balance;
 }
 .cap .w{color:var(--faint);transition:color .12s}
 .cap .w.done{color:#a59eb5}
-.cap .w.on{color:var(--text)}
-.cap.hint{font:400 13px/1.4 var(--f-body);color:var(--dim)}
+.cap .w.on{color:var(--text);text-shadow:0 0 12px rgba(255,184,74,0.4)}
+.cap.hint{font:400 12.5px/1.4 var(--f-body);color:var(--faint);letter-spacing:.02em}
 
-.bottom{display:grid;gap:8px}
-.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.m{display:grid;gap:5px;min-width:0}
-.m .lab{display:flex;justify-content:space-between;gap:4px;font:500 9.5px/1 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
-.m .lab span:last-child{letter-spacing:0;text-transform:none;white-space:nowrap}
-.bar{height:4px;border-radius:2px;background:#1b1826;overflow:hidden}
+.bottom{display:grid;gap:10px}
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-inline:4px}
+.m{display:grid;min-width:0}
+.bar{height:3.5px;border-radius:2px;background:rgba(255,255,255,0.06);overflow:hidden}
 .bar i{display:block;width:100%;height:100%;background:var(--c);transform:scaleX(0);transform-origin:0 50%;border-radius:2px}
 
-.read{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font:500 9.5px/1 var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
-.read span{display:grid;gap:4px;min-width:0}
-.read b{display:block;font:500 16px/1 var(--f-mono);letter-spacing:0;text-transform:none;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
-
-.dock{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:8px}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--well);border-radius:8px;padding:3px}
-.tab{border:0;background:transparent;color:var(--dim);font:600 12px/1 var(--f-body);padding:8px 4px;border-radius:6px;cursor:pointer}
-.tab[aria-selected="true"]{background:#221f2f;color:var(--text)}
-.pane{display:grid;gap:8px}
-.pane[hidden]{display:none}
-textarea{width:100%;resize:none;background:var(--well);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font:400 13px/1.35 var(--f-body)}
+.dock{
+  background:rgba(17,15,25,0.88);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 12px;display:grid;gap:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+textarea{
+  width:100%;resize:none;background:var(--well);border:1px solid var(--line);color:var(--text);
+  border-radius:10px;padding:8px 12px;font:400 13.5px/1.4 var(--f-body);
+  transition:border-color .15s;
+}
+textarea:focus{border-color:var(--mid)}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.btn{appearance:none;min-height:38px;border:1px solid var(--line);background:#1a1726;color:var(--text);border-radius:8px;padding:0 14px;font:600 12.5px/1 var(--f-body);cursor:pointer}
+.btn{
+  appearance:none;min-height:36px;border:1px solid var(--line);background:#1a1726;color:var(--text);
+  border-radius:8px;padding:0 12px;font:600 12px/1 var(--f-body);cursor:pointer;
+  transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn:hover{background:#231f33}
 .btn:disabled{opacity:.45;cursor:default}
-.btn.primary{background:var(--mid);border-color:var(--mid);color:#1c1204}
-.btn.stop{margin-left:auto;border-color:var(--lo);color:var(--lo);background:transparent}
-select.btn{max-width:160px;padding-right:6px;font-size:11.5px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
-.note{margin:0;color:var(--dim);font-size:11.5px;line-height:1.4}
-.note b{color:var(--text);font-weight:500}
+.btn.primary{background:var(--mid);border-color:var(--mid);color:#1c1204;font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.stop{margin-left:auto;border-color:var(--lo);color:var(--lo);background:rgba(255,91,58,0.08)}
+select.btn{max-width:150px;padding-right:6px;font-size:11.5px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 
 @media (max-width: 480px){
-  .app{padding-block:6px;padding-inline:8px;gap:6px}
-  .mark{font-size:12.5px;letter-spacing:.08em}
-  #chipSig{display:none}
-  .chip{padding:4px 7px;font-size:9px;gap:5px}
-  .cap{font-size:14px;min-height:2em;max-height:3em}
-  .meters,.read{gap:5px}
-  .read b{font-size:15px}
-  .dock{padding:6px;gap:6px}
-  .tab{font-size:11px;padding:6px 2px}
-  textarea{font-size:12px;padding:6px 8px}
-  .btn{min-height:36px;padding:0 10px;font-size:12px}
-  select.btn{max-width:130px;font-size:11px}
-}
-
-@media (max-height: 720px){
-  .stage{grid-template-rows:minmax(90px,1fr) auto}
-  .cap{min-height:1.9em;max-height:2.6em;font-size:13px}
-  .meters,.read{gap:4px}
-  .read b{font-size:14px}
+  .app{padding-block:8px;padding-inline:10px;gap:8px}
+  .mark{font-size:13px;letter-spacing:.08em}
+  .cap{font-size:13px}
+  .dock{padding:8px;gap:6px}
+  textarea{font-size:12.5px;padding:6px 10px}
+  .btn{min-height:34px;padding:0 10px;font-size:11.5px}
+  select.btn{max-width:120px;font-size:11px}
 }
 </style>
 </head>
@@ -167,13 +165,14 @@ select.btn{max-width:160px;padding-right:6px;font-size:11.5px;text-overflow:elli
 <div class="app">
   <header class="top">
     <div style="display:flex;align-items:center;gap:10px">
-      <a href="/" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font:600 11.5px var(--f-body);color:var(--dim);background:var(--well);transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim)'">← Assistant</a>
-      <div class="mark">Awaaz • Prabhat</div>
+      <a href="/" class="back-link">← Assistant</a>
+      <div class="mark">Awaaz Orb</div>
     </div>
     <div class="chips">
-      <span class="chip" id="chipVoice" style="color:var(--mid);border-color:rgba(255,184,74,0.35)"><i class="dot" style="background:var(--mid);box-shadow:0 0 6px var(--mid)"></i><span>Prabhat (+20% ⚡)</span></span>
-      <span class="chip" id="chipState" data-live="0"><i class="dot"></i><span id="stateTxt">Idle</span></span>
-      <span class="chip" id="chipSig"><span id="sigTxt">Live FFT</span></span>
+      <span class="chip" id="chipState" data-live="0">
+        <i class="dot"></i><span id="stateTxt">Prabhat AI</span>
+      </span>
+      <span id="sigTxt" style="display:none"></span>
     </div>
   </header>
 
@@ -182,54 +181,33 @@ select.btn{max-width:160px;padding-right:6px;font-size:11.5px;text-overflow:elli
       <canvas id="gl" role="img" aria-label="Awaaz ke hisaab se badalta orb"></canvas>
       <canvas id="ring" aria-hidden="true"></canvas>
     </div>
-    <p class="cap hint" id="cap" aria-live="polite">Bolo dabao. Orb awaaz ki frequency ke hisaab se shape, rang aur hilna badlega.</p>
+    <p class="cap hint" id="cap" aria-live="polite">Prabhat AI Voice • Realtime Orb</p>
   </main>
 
   <section class="bottom">
-    <div class="meters">
-      <div class="m" style="--c:var(--lo)"><div class="lab"><span>Bass</span><span>60–250 Hz</span></div><div class="bar"><i id="mBass"></i></div></div>
-      <div class="m" style="--c:var(--mid)"><div class="lab"><span>Mid</span><span>250 Hz–2 kHz</span></div><div class="bar"><i id="mMid"></i></div></div>
-      <div class="m" style="--c:var(--hi)"><div class="lab"><span>High</span><span>2–8 kHz</span></div><div class="bar"><i id="mHigh"></i></div></div>
+    <!-- Clean, minimalist audio reactive level bars (no text labels) -->
+    <div class="meters" title="Audio Levels">
+      <div class="m" style="--c:var(--lo)"><div class="bar"><i id="mBass"></i></div></div>
+      <div class="m" style="--c:var(--mid)"><div class="bar"><i id="mMid"></i></div></div>
+      <div class="m" style="--c:var(--hi)"><div class="bar"><i id="mHigh"></i></div></div>
     </div>
-    <div class="read">
-      <span>Dominant<b id="rHz">—</b></span>
-      <span>Note<b id="rNote">—</b></span>
-      <span>Hilna<b id="rShake">—</b></span>
+
+    <!-- Hidden elements preserving JS compatibility -->
+    <div class="sr" aria-hidden="true">
+      <b id="rHz"></b><b id="rNote"></b><b id="rShake"></b><span id="fileNote"></span>
     </div>
 
     <div class="dock">
-      <div class="tabs" role="tablist" aria-label="Awaaz ka source">
-        <button class="tab" role="tab" id="tabSay" aria-selected="true" aria-controls="paneSay" type="button">AI bole</button>
-        <button class="tab" role="tab" id="tabFile" aria-selected="false" aria-controls="paneFile" type="button">Audio file</button>
-        <button class="tab" role="tab" id="tabSweep" aria-selected="false" aria-controls="paneSweep" type="button">Sweep</button>
-      </div>
-
-      <div class="pane" id="paneSay" role="tabpanel" aria-labelledby="tabSay">
-        <label class="sr" for="say">Jo AI bolega</label>
-        <textarea id="say" rows="2" maxlength="400">Namaste! Main bol raha hoon, aur ye orb meri awaaz ki frequency ke hisaab se badal raha hai. Bass se ubhaar, high se kampan.</textarea>
-        <div class="row">
-          <button class="btn primary" id="btnSay" type="button">Bolo</button>
-          <button class="btn" id="btnAsk" type="button" hidden>AI se pucho</button>
-          <select class="btn" id="voiceSel" aria-label="Awaaz chuno"></select>
-          <button class="btn stop" id="btnStop" type="button" hidden>Roko</button>
-        </div>
-      </div>
-
-      <div class="pane" id="paneFile" role="tabpanel" aria-labelledby="tabFile" hidden>
-        <div class="row">
-          <button class="btn primary" id="btnFile" type="button">Audio chuno</button>
-          <input type="file" id="fileIn" accept="audio/*,video/*" hidden>
-          <button class="btn stop" id="btnStop2" type="button" hidden>Roko</button>
-        </div>
-        <p class="note" id="fileNote">MP3, WAV, M4A ya OGG chuno, ya file ko orb par drop karo. Yahan awaaz <b>real FFT</b> se padhi jaati hai.</p>
-      </div>
-
-      <div class="pane" id="paneSweep" role="tabpanel" aria-labelledby="tabSweep" hidden>
-        <div class="row">
-          <button class="btn primary" id="btnSweep" type="button">Sweep chalao</button>
-          <button class="btn stop" id="btnStop3" type="button" hidden>Roko</button>
-        </div>
-        <p class="note">80 Hz se 5 kHz tak ek saaf tone. Ubhaar neeche (bass) se upar (high) chadhta hai aur hilne ki raftaar badhti hai.</p>
+      <label class="sr" for="say">Jo AI bolega</label>
+      <textarea id="say" rows="2" maxlength="400" placeholder="Yahan likhein jo AI se bulwana hai...">Namaste! Main Prabhat hoon, aapki AI awaaz.</textarea>
+      
+      <div class="row">
+        <button class="btn primary" id="btnSay" type="button">▶ Bolo</button>
+        <button class="btn" id="btnFile" type="button" title="Audio file chuno ya drag karo">📁 File</button>
+        <input type="file" id="fileIn" accept="audio/*,video/*" hidden>
+        <button class="btn" id="btnAsk" type="button" hidden>AI se pucho</button>
+        <select class="btn" id="voiceSel" aria-label="Awaaz chuno"></select>
+        <button class="btn stop" id="btnStop" type="button" hidden>⏹ Roko</button>
       </div>
     </div>
   </section>
@@ -891,12 +869,12 @@ const STATE_TXT = { idle:'Idle', say:'AI bol raha hai', file:'Audio chal raha ha
 let state = 'idle';
 function setState(s){
   state = s;
-  $('stateTxt').textContent = STATE_TXT[s];
-  $('chipState').dataset.live = s === 'idle' ? '0' : '1';
+  if($('stateTxt')) $('stateTxt').textContent = s === 'idle' ? 'Prabhat AI' : STATE_TXT[s];
+  if($('chipState')) $('chipState').dataset.live = s === 'idle' ? '0' : '1';
   document.querySelectorAll('.stop').forEach(b => { b.hidden = s === 'idle'; });
 }
-const setSig = t => { $('sigTxt').textContent = t; };
-const fileNote = t => { $('fileNote').textContent = t; };
+const setSig = t => { if($('sigTxt')) $('sigTxt').textContent = t; };
+const fileNote = t => { if($('fileNote')) $('fileNote').textContent = t; setCaption(null, t); };
 
 const cap = $('cap'); let capEls = [];
 function setCaption(words, text){
@@ -919,17 +897,24 @@ function markWord(i){
 
 const TABS = ['Say', 'File', 'Sweep'];
 function selectTab(name){
-  TABS.forEach(n => { const on = n === name; $('tab' + n).setAttribute('aria-selected', String(on)); $('pane' + n).hidden = !on; });
+  TABS.forEach(n => {
+    const t = $('tab' + n), p = $('pane' + n);
+    if(t) t.setAttribute('aria-selected', String(n === name));
+    if(p) p.hidden = n !== name;
+  });
 }
-TABS.forEach(n => $('tab' + n).addEventListener('click', () => { if(state !== 'idle') stopAll(); selectTab(n); }));
-$('btnSay').addEventListener('click', () => say($('say').value));
-$('btnSweep').addEventListener('click', startSweep);
+TABS.forEach(n => {
+  const t = $('tab' + n);
+  if(t) t.addEventListener('click', () => { if(state !== 'idle') stopAll(); selectTab(n); });
+});
+if($('btnSay')) $('btnSay').addEventListener('click', () => say($('say').value));
+if($('btnSweep')) $('btnSweep').addEventListener('click', startSweep);
 document.querySelectorAll('.stop').forEach(b => b.addEventListener('click', stopAll));
-$('btnFile').addEventListener('click', () => $('fileIn').click());
-$('fileIn').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if(f) playFile(f); e.target.value = ''; });
+if($('btnFile')) $('btnFile').addEventListener('click', () => $('fileIn').click());
+if($('fileIn')) $('fileIn').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if(f) playFile(f); e.target.value = ''; });
 ['dragenter', 'dragover'].forEach(t => view.addEventListener(t, e => { e.preventDefault(); view.classList.add('drag'); }));
 ['dragleave', 'drop'].forEach(t => view.addEventListener(t, e => { e.preventDefault(); view.classList.remove('drag'); }));
-view.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f){ selectTab('File'); playFile(f); } });
+view.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f){ playFile(f); } });
 
 /* "AI se pucho": the page asks Claude through the sample capability, then speaks the answer */
 let askAI = null;
@@ -1030,9 +1015,9 @@ function frame(now){
   $('mMid').style.transform = 'scaleX(' + Math.min(1, B.m*1.15).toFixed(3) + ')';
   $('mHigh').style.transform = 'scaleX(' + Math.min(1, B.h*1.15).toFixed(3) + ')';
   if(tick % 6 === 0){
-    $('rHz').textContent = hzShow > 0 ? Math.round(hzShow) + ' Hz' : '—';
-    $('rNote').textContent = hzShow > 0 ? noteName(hzShow) : '—';
-    $('rShake').textContent = amp > .0012 && M.level > .03 ? fs.toFixed(1) + ' Hz' : '—';
+    if($('rHz')) $('rHz').textContent = hzShow > 0 ? Math.round(hzShow) + ' Hz' : '—';
+    if($('rNote')) $('rNote').textContent = hzShow > 0 ? noteName(hzShow) : '—';
+    if($('rShake')) $('rShake').textContent = amp > .0012 && M.level > .03 ? fs.toFixed(1) + ' Hz' : '—';
   }
   requestAnimationFrame(frame);
 }
