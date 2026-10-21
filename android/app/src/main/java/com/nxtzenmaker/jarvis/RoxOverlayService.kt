@@ -229,15 +229,13 @@ class RoxOverlayService : Service() {
             loadUrl("file:///android_asset/orb_overlay.html")
         }
 
-        val btnClose = overlayView?.findViewById<TextView>(R.id.btnClose)
-        btnClose?.setOnClickListener { shutdownService() }
-
-        // Touch & Drag across screen
+        // Touch & Drag across screen with Slide Down To Turn Off
         overlayView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
             private var initialTouchY = 0f
+            private var isSlidingDownToClose = false
 
             override fun onTouch(v: View?, event: MotionEvent): Boolean {
                 val lp = layoutParams ?: return false
@@ -247,15 +245,47 @@ class RoxOverlayService : Service() {
                         initialY = lp.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
+                        isSlidingDownToClose = false
                         return false
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        lp.x = initialX + (event.rawX - initialTouchX).toInt()
-                        lp.y = initialY + (event.rawY - initialTouchY).toInt()
+                        val deltaX = event.rawX - initialTouchX
+                        val deltaY = event.rawY - initialTouchY
+
+                        // Check if sliding down predominantly to turn off
+                        if (deltaY > 180f && deltaY > kotlin.math.abs(deltaX) * 1.25f) {
+                            if (!isSlidingDownToClose) {
+                                isSlidingDownToClose = true
+                                updateOrbState("closing", "Slide down to close Rox ⬇️")
+                            }
+                        } else if (isSlidingDownToClose && deltaY < 120f) {
+                            isSlidingDownToClose = false
+                            if (isCodeVerified) {
+                                updateOrbState("code_verified", "Rox Ready • Listening")
+                            } else {
+                                updateOrbState("activating", "Rox Activated • Send code...")
+                            }
+                        }
+
+                        lp.x = initialX + deltaX.toInt()
+                        lp.y = initialY + deltaY.toInt()
                         try {
                             windowManager?.updateViewLayout(overlayView, lp)
                         } catch (_: Exception) {}
                         return true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val deltaX = event.rawX - initialTouchX
+                        val deltaY = event.rawY - initialTouchY
+
+                        if (deltaY > 160f && deltaY > kotlin.math.abs(deltaX) * 1.2f) {
+                            // User slid down to turn off Rox!
+                            updateOrbState("closing", "Shutting down Rox...")
+                            speakWithPrabhat("Shutting down Rox. Goodbye.") {
+                                shutdownService()
+                            }
+                            return true
+                        }
                     }
                 }
                 return false
@@ -559,9 +589,11 @@ class RoxOverlayService : Service() {
                     }
                 }
             } else {
-                // 3. User Command Handling
-                updateOrbState("listening_cmd", "Received: $transcript")
-                speakWithPrabhat("I heard $transcript") {
+                // 3. User Query / Command -> Rox AI Brain (Groq API)
+                updateOrbState("processing", "Rox Brain thinking...")
+                val aiReply = GroqBrain.askRox(this@RoxOverlayService, transcript)
+                updateOrbState("listening_cmd", aiReply)
+                speakWithPrabhat(aiReply) {
                     resumeRecordingAfterSpeech()
                 }
             }

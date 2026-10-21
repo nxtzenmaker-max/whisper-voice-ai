@@ -160,6 +160,37 @@ class MainActivity : AppCompatActivity() {
         val openCodeDialog = View.OnClickListener { showCodeWordDialog() }
         binding.rowCodeWord.setOnClickListener(openCodeDialog)
         binding.tvCurrentCodeWord.setOnClickListener(openCodeDialog)
+
+        binding.tvBackendUrl.setOnClickListener { showGroqApiKeyDialog() }
+    }
+
+    private fun showGroqApiKeyDialog() {
+        val currentKey = Prefs.getGroqApiKey(this)
+        val input = android.widget.EditText(this).apply {
+            setText(currentKey)
+            hint = "gsk_..."
+            setPadding(40, 30, 40, 30)
+            setTextColor(android.graphics.Color.WHITE)
+            setHintTextColor(android.graphics.Color.GRAY)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Groq AI Brain API Key")
+            .setMessage("Rox AI brain uses Groq Cloud API for lightning-fast voice replies. You can keep the default key or use your own.")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newKey = input.text.toString().trim()
+                if (newKey.isNotEmpty()) {
+                    Prefs.setGroqApiKey(this, newKey)
+                    Toast.makeText(this, "Groq API Key saved!", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNeutralButton("Reset Default") { _, _ ->
+                Prefs.setGroqApiKey(this, "")
+                Toast.makeText(this, "Reset to default Groq Key (Auto Cloud)", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun updateCodeWordDisplay() {

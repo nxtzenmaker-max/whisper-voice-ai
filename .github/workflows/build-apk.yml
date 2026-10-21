@@ -58,19 +58,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v1.9-apk
-          name: "ROX Voice Assistant Android APK (v1.9 - Prabhat Voice & Internal Mic Fix)"
+          tag_name: v2.0-apk
+          name: "ROX Voice Assistant Android APK (v2.0 - Groq AI Brain & Custom Logo)"
           body: |
-            ### 🔮 ROX Voice Assistant Android APK (v1.9 - Prabhat Voice & Mic Upgrade)
+            ### 🔮 ROX Voice Assistant Android APK (v2.0 - Groq AI Brain & Gesture Dismiss)
             
-            ✅ **Major Fixes & Upgrades**:
-            - 🎙️ **Prabhat Voice (`en-IN-PrabhatNeural`)**: Replaced Android's robotic female TTS with authentic Prabhat Neural TTS via Microsoft Edge engine. Rox now speaks in a natural Hindi-English male voice!
-            - 🔇 **Zero Google Popups / Direct Internal Mic**: Removed Google SpeechRecognizer completely. Now uses direct hardware PCM `AudioRecord` with real-time RMS energy and Whisper AI backend! Zero Google chimes, zero Google dialogs, and zero crash loops.
-            - 🔊 **Live Audio-Reactive 3D Orb**: Real-time microphone audio frequency is streamed directly into the 3D WebGL Orb, so it vibrates and pulses smoothly in real time with your voice!
-            - 🧠 **Smart Phonetic Tolerance for Code Word**: Saying "Rox 7", "Rocs", "Rocks", "Rox seven", "7", etc. is automatically recognized without false rejections.
-            - 👆 **Instant Tap-to-Unlock Fallback**: You can also simply tap the 3D Orb to instantly verify and unlock Rox without saying the code word.
-            - ⚙️ **Code Word Customization**: Open the main app to customize your secret code or disable code requirement completely.
-            - 🛡️ **Anti-Shutdown Protection**: Rox stays running until you say *"Rox close"*, *"Rox stop"*, *"band ho jao"*, or tap close.
+            ✅ **What's New in v2.0**:
+            - 🤖 **Groq AI Brain Integrated**: Rox is now powered by Groq LPU with Qwen 27B / GPT-OSS! Ask anything (weather, general knowledge, jokes, tech, conversation) and Rox speaks intelligent answers in Prabhat's natural Hindi-English voice!
+            - 🖼️ **New Official Custom Logo**: Installed your custom 1254x1254 logo across launcher icons, mipmaps, and app UI.
+            - 🚫 **Cross (✕) Button Removed**: Overlay is now a clean, unobstructed, floating 3D glowing WebGL orb!
+            - ⬇️ **Slide Down To Turn Off (Swipe-To-Dismiss)**: Simply slide or flick the 3D orb downward to shut down Rox anytime with haptic feedback!
+            - 🎙️ **Prabhat Neural Voice & Internal AudioRecord**: 100% Google popups removed, high-precision Hinglish voice answers, live audio-reactive 3D orb vibration.
+            - 🔑 **Smart Phonetic Tolerance & Tap-to-Unlock**: Fast unlock with voice ("Rox 7", "Rocs", "7", etc.) or single tap on the orb.
+            
+            📥 **How to Install**:
+            1. Download `Rox-Voice-Assistant.apk` below.
+            2. Tap "Install" or "Update".
+            3. Grant "Display over other apps", "Microphone", and "Accessibility" (Volume 3x trigger).
+            4. Drag "Rox AI" into Quick Settings or press Volume Down 3 times!
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.

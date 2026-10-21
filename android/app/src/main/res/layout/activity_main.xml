@@ -25,10 +25,9 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_shield_check"
-                app:tint="@color/cyan_400" />
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/app_logo" />
 
             <TextView
                 android:id="@+id/tvTitle"
