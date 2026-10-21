@@ -155,6 +155,59 @@ class MainActivity : AppCompatActivity() {
                 startListening()
             }
         }
+
+        updateCodeWordDisplay()
+        val openCodeDialog = View.OnClickListener { showCodeWordDialog() }
+        binding.rowCodeWord.setOnClickListener(openCodeDialog)
+        binding.tvCurrentCodeWord.setOnClickListener(openCodeDialog)
+    }
+
+    private fun updateCodeWordDisplay() {
+        val requireCode = Prefs.isCodeRequired(this)
+        val codeWord = Prefs.getCodeWord(this)
+        if (!requireCode) {
+            binding.tvCurrentCodeWord.text = "Disabled (Instant Start)"
+            binding.tvCurrentCodeWord.setTextColor(ContextCompat.getColor(this, R.color.emerald_400))
+        } else {
+            binding.tvCurrentCodeWord.text = "$codeWord (Tap to edit)"
+            binding.tvCurrentCodeWord.setTextColor(ContextCompat.getColor(this, R.color.cyan_400))
+        }
+    }
+
+    private fun showCodeWordDialog() {
+        val currentCode = Prefs.getCodeWord(this)
+        val isRequired = Prefs.isCodeRequired(this)
+
+        val input = android.widget.EditText(this).apply {
+            setText(currentCode)
+            hint = "e.g. rox 7, open, jarvis"
+            setPadding(40, 30, 40, 30)
+            setTextColor(android.graphics.Color.WHITE)
+            setHintTextColor(android.graphics.Color.GRAY)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Set Rox Activation Code Word")
+            .setMessage("Jab Rox shuru hoga, ye secret code voice se bolna hoga. Default: 'rox 7'")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newCode = input.text.toString().trim()
+                if (newCode.isNotEmpty()) {
+                    Prefs.setCodeWord(this, newCode)
+                    Prefs.setCodeRequired(this, true)
+                    updateCodeWordDisplay()
+                    Toast.makeText(this, "Code set to '$newCode'", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNeutralButton(if (isRequired) "Disable Code Requirement" else "Enable Code Requirement") { _, _ ->
+                val newState = !isRequired
+                Prefs.setCodeRequired(this, newState)
+                updateCodeWordDisplay()
+                val msg = if (newState) "Code word enabled" else "Code word disabled (Rox activates instantly!)"
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun checkAndStartBackgroundListening() {

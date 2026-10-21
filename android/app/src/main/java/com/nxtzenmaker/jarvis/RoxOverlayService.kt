@@ -1,6 +1,7 @@
 package com.nxtzenmaker.jarvis
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,30 +13,30 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.*
+import java.io.File
+import java.util.ArrayDeque
 import java.util.Locale
 
 class RoxOverlayService : Service() {
@@ -74,20 +75,34 @@ class RoxOverlayService : Service() {
     private var webView: WebView? = null
     private var layoutParams: WindowManager.LayoutParams? = null
 
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var recognizerIntent: Intent? = null
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private lateinit var audioPlayer: AudioPlayer
+    private lateinit var apiClient: ApiClient
+
+    private var audioRecord: AudioRecord? = null
+    private var listeningJob: Job? = null
+    private var isListeningLoopActive = false
+    private var isRecordingPaused = false
+    private var isSpeaking = false
 
     private var isCodeVerified = false
-    private var isListening = false
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var wasJarvisServiceRunning = false
+
+    private var fallbackTts: TextToSpeech? = null
+    private var fallbackTtsReady = false
+
+    private val sampleRate = 16000
+    private val channelConfig = AudioFormat.CHANNEL_IN_MONO
+    private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        initTTS()
-        initSpeechRecognizer()
+        audioPlayer = AudioPlayer(this)
+        apiClient = ApiClient("https://whisper-voice-ai.vercel.app")
+        initFallbackTTS()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -109,11 +124,30 @@ class RoxOverlayService : Service() {
             return START_NOT_STICKY
         }
 
+        // Avoid mic contention with JarvisService
+        if (JarvisService.isServiceRunning) {
+            wasJarvisServiceRunning = true
+            JarvisService.stopListeningService(this)
+        }
+
         showFloatingOverlay()
 
+        val requireCode = Prefs.isCodeRequired(this)
+        isCodeVerified = !requireCode
+
         mainHandler.postDelayed({
-            speakText("Rox activated, send your code with your voice to start", "UTTERANCE_ACTIVATION")
-        }, 500)
+            if (requireCode) {
+                updateOrbState("activating", "Rox Activated • Send code...")
+                speakWithPrabhat("Rox activated, send your code with your voice to start") {
+                    startContinuousListening()
+                }
+            } else {
+                updateOrbState("code_verified", "Rox Ready • Listening")
+                speakWithPrabhat("Rox activated. Ready for your command.") {
+                    startContinuousListening()
+                }
+            }
+        }, 400)
 
         return START_STICKY
     }
@@ -167,7 +201,16 @@ class RoxOverlayService : Service() {
                 @JavascriptInterface
                 fun onOrbTapped() {
                     mainHandler.post {
-                        if (!isListening) startListening()
+                        if (!isCodeVerified) {
+                            // Instant Tap-To-Unlock fallback
+                            isCodeVerified = true
+                            updateOrbState("code_verified", "Verified (Tapped) • Ready")
+                            speakWithPrabhat("Code verified. Rox is ready.") {
+                                resumeRecordingAfterSpeech()
+                            }
+                        } else {
+                            updateOrbState("listening_cmd", "Listening for command...")
+                        }
                     }
                 }
             }, "AndroidBridge")
@@ -175,7 +218,11 @@ class RoxOverlayService : Service() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    updateOrbState("activating", "Rox Activated • Send code...")
+                    if (isCodeVerified) {
+                        updateOrbState("code_verified", "Rox Ready • Command ready")
+                    } else {
+                        updateOrbState("activating", "Rox Activated • Send code...")
+                    }
                 }
             }
 
@@ -234,148 +281,332 @@ class RoxOverlayService : Service() {
         }
     }
 
-    private fun initTTS() {
-        tts = TextToSpeech(this) { status ->
+    /**
+     * Speaks text using Prabhat Neural (+15% rate) with natural voice.
+     * Also pulses the 3D Orb while speaking.
+     */
+    private fun speakWithPrabhat(text: String, onComplete: (() -> Unit)? = null) {
+        serviceScope.launch {
+            isSpeaking = true
+            isRecordingPaused = true
+
+            // Pulse the 3D orb while speaking
+            val speechAnimJob = launch {
+                var angle = 0.0
+                while (isActive && isSpeaking) {
+                    val lvl = (0.35f + 0.35f * kotlin.math.sin(angle)).toFloat()
+                    feedAudioLevelToOrb(lvl)
+                    angle += 0.35
+                    delay(55)
+                }
+                feedAudioLevelToOrb(0.04f)
+            }
+
+            try {
+                val ttsUrl = apiClient.getTtsAudioUrl(text, rate = "+15%")
+                withContext(Dispatchers.Main) {
+                    audioPlayer.playUrl(
+                        url = ttsUrl,
+                        onStart = {
+                            isSpeaking = true
+                        },
+                        onComplete = {
+                            isSpeaking = false
+                            speechAnimJob.cancel()
+                            feedAudioLevelToOrb(0.04f)
+                            onComplete?.invoke()
+                        },
+                        onError = {
+                            isSpeaking = false
+                            speechAnimJob.cancel()
+                            feedAudioLevelToOrb(0.04f)
+                            fallbackSpeak(text, onComplete)
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                isSpeaking = false
+                speechAnimJob.cancel()
+                feedAudioLevelToOrb(0.04f)
+                fallbackSpeak(text, onComplete)
+            }
+        }
+    }
+
+    private fun fallbackSpeak(text: String, onComplete: (() -> Unit)?) {
+        mainHandler.post {
+            if (fallbackTtsReady && fallbackTts != null) {
+                fallbackTts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "FALLBACK_ROX")
+                mainHandler.postDelayed({ onComplete?.invoke() }, 2200)
+            } else {
+                onComplete?.invoke()
+            }
+        }
+    }
+
+    private fun initFallbackTTS() {
+        fallbackTts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                ttsReady = true
-                tts?.language = Locale("hi", "IN")
-                tts?.setPitch(1.0f)
-                tts?.setSpeechRate(1.1f)
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {
-                        feedAudioLevelToOrb(0.85f)
+                fallbackTtsReady = true
+                fallbackTts?.language = Locale("hi", "IN")
+            }
+        }
+    }
+
+    /**
+     * Direct AudioRecord capture: 16kHz PCM mono.
+     * Feeds real-time frequency energy to 3D Orb.
+     * ZERO Google SpeechRecognizer popups or crashes.
+     */
+    @SuppressLint("MissingPermission")
+    private fun startContinuousListening() {
+        if (isListeningLoopActive) return
+        isListeningLoopActive = true
+        isRecordingPaused = false
+
+        listeningJob = serviceScope.launch {
+            val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            val bufferSize = maxOf(minBufferSize, 4096)
+
+            try {
+                audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                    sampleRate,
+                    channelConfig,
+                    audioFormat,
+                    bufferSize
+                )
+
+                if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                    updateOrbState("activating", "Mic Initialization Failed")
+                    return@launch
+                }
+
+                audioRecord?.startRecording()
+
+                val frameSize = 1024 // ~64ms
+                val buffer = ShortArray(frameSize)
+                val preSpeechQueue = ArrayDeque<ShortArray>(5)
+                val speechChunks = ArrayList<ShortArray>()
+
+                var isCollectingSpeech = false
+                var silenceFrames = 0
+
+                val voiceThreshold = 0.030f   // Speech trigger threshold
+                val silenceThreshold = 0.018f // Floor threshold
+                val maxSilenceFrames = 10     // ~640ms silence to conclude utterance
+                val maxSpeechFrames = 80      // ~5.1s maximum utterance
+                val minSpeechFrames = 8       // ~0.5s minimum utterance
+
+                while (isActive && isListeningLoopActive) {
+                    if (isRecordingPaused || isSpeaking || audioPlayer.isPlayingAudio()) {
+                        delay(120)
+                        continue
                     }
 
-                    override fun onDone(utteranceId: String?) {
-                        feedAudioLevelToOrb(0.1f)
-                        when (utteranceId) {
-                            "UTTERANCE_ACTIVATION", "UTTERANCE_RETRY" -> {
-                                mainHandler.post {
+                    val read = audioRecord?.read(buffer, 0, frameSize) ?: 0
+                    if (read <= 0) continue
+
+                    // Calculate RMS
+                    var sum = 0.0
+                    for (i in 0 until read) {
+                        val s = buffer[i]
+                        sum += s * s
+                    }
+                    val rms = kotlin.math.sqrt(sum / read).toFloat() / 32768.0f
+
+                    // Live feed RMS to 3D WebGL Orb visualizer
+                    val visualLevel = (rms * 4.5f).coerceIn(0.03f, 1.0f)
+                    feedAudioLevelToOrb(visualLevel)
+
+                    if (!isCollectingSpeech) {
+                        if (preSpeechQueue.size >= 5) {
+                            preSpeechQueue.pollFirst()
+                        }
+                        preSpeechQueue.addLast(buffer.copyOf())
+
+                        if (rms >= voiceThreshold) {
+                            isCollectingSpeech = true
+                            speechChunks.clear()
+                            for (pre in preSpeechQueue) {
+                                speechChunks.add(pre)
+                            }
+                            preSpeechQueue.clear()
+                            speechChunks.add(buffer.copyOf())
+                            silenceFrames = 0
+
+                            if (!isCodeVerified) {
+                                updateOrbState("hearing", "Hearing code word...")
+                            } else {
+                                updateOrbState("hearing", "Hearing command...")
+                            }
+                        }
+                    } else {
+                        speechChunks.add(buffer.copyOf())
+
+                        if (rms < silenceThreshold) {
+                            silenceFrames++
+                        } else {
+                            silenceFrames = 0
+                        }
+
+                        if (silenceFrames >= maxSilenceFrames || speechChunks.size >= maxSpeechFrames) {
+                            // Utterance complete
+                            val collectedChunks = ArrayList(speechChunks)
+                            isCollectingSpeech = false
+                            silenceFrames = 0
+                            speechChunks.clear()
+
+                            if (collectedChunks.size >= minSpeechFrames) {
+                                processSpeechUtterance(collectedChunks)
+                            } else {
+                                if (!isCodeVerified) {
                                     updateOrbState("listening_code", "Listening for code word...")
-                                    startListening()
+                                } else {
+                                    updateOrbState("code_verified", "Listening for command...")
                                 }
-                            }
-                            "UTTERANCE_VERIFIED" -> {
-                                mainHandler.post {
-                                    isCodeVerified = true
-                                    updateOrbState("code_verified", "Verified • Command ready")
-                                    startListening()
-                                }
-                            }
-                            "UTTERANCE_SHUTDOWN" -> {
-                                mainHandler.post { shutdownService() }
                             }
                         }
                     }
-
-                    override fun onError(utteranceId: String?) {
-                        feedAudioLevelToOrb(0.05f)
-                    }
-                })
-            }
-        }
-    }
-
-    private fun speakText(text: String, utteranceId: String) {
-        if (ttsReady && tts != null) {
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-        }
-    }
-
-    private fun initSpeechRecognizer() {
-        if (SpeechRecognizer.isRecognitionAvailable(this)) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-            recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            }
-
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) { isListening = true }
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {
-                    val normalized = ((rmsdB + 2f) / 10f).coerceIn(0f, 1f)
-                    feedAudioLevelToOrb(normalized)
                 }
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() { isListening = false }
-                override fun onError(error: Int) {
-                    isListening = false
-                    if (!isCodeVerified) {
-                        mainHandler.postDelayed({ startListening() }, 1200)
-                    }
-                }
-                override fun onResults(results: Bundle?) {
-                    isListening = false
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        processSpokenText(matches)
-                    }
-                }
-                override fun onPartialResults(partialResults: Bundle?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                cleanUpAudioRecord()
+            }
         }
     }
 
-    private fun startListening() {
-        mainHandler.post {
-            try {
-                speechRecognizer?.cancel()
-                recognizerIntent?.let { speechRecognizer?.startListening(it) }
-            } catch (_: Exception) {}
-        }
-    }
-
-    private fun processSpokenText(matches: ArrayList<String>) {
-        val codeWord = Prefs.getCodeWord(this).lowercase()
-        var matchedCode = false
-
-        for (match in matches) {
-            val lower = match.lowercase()
-
-            // Shutdown commands
-            if (lower.contains("rox close") || lower.contains("rox stop") || lower.contains("rox shutdown") || lower.contains("band ho jao") || lower.contains("so jao")) {
-                updateOrbState("closing", "Shutting down Rox...")
-                speakText("Shutting down Rox. Goodbye.", "UTTERANCE_SHUTDOWN")
-                return
-            }
-
-            // Code word verification
-            if (!isCodeVerified && (lower.contains(codeWord) || lower.replace("\\s+".toRegex(), "").contains(codeWord.replace("\\s+".toRegex(), "")))) {
-                matchedCode = true
-                break
-            }
-        }
-
-        if (!isCodeVerified) {
-            if (matchedCode) {
-                speakText("Code verified. Rox is ready.", "UTTERANCE_VERIFIED")
+    private fun resumeRecordingAfterSpeech() {
+        serviceScope.launch {
+            delay(350) // Allow speaker audio to dissipate from room
+            isRecordingPaused = false
+            if (!isCodeVerified) {
+                updateOrbState("listening_code", "Listening for code word...")
             } else {
-                updateOrbState("activating", "Invalid code. Try again...")
-                speakText("Code not recognized. Send your code to start.", "UTTERANCE_RETRY")
+                updateOrbState("code_verified", "Listening for command...")
             }
-        } else {
-            val cmd = matches[0]
-            updateOrbState("listening_cmd", "Received: $cmd")
-            speakText("I heard $cmd", "UTTERANCE_CMD")
-            mainHandler.postDelayed({ startListening() }, 2500)
+        }
+    }
+
+    private fun processSpeechUtterance(chunks: List<ShortArray>) {
+        serviceScope.launch(Dispatchers.IO) {
+            isRecordingPaused = true
+            updateOrbState("processing", "Verifying voice...")
+
+            var totalSamples = 0
+            for (c in chunks) totalSamples += c.size
+            val allShorts = ShortArray(totalSamples)
+            var offset = 0
+            for (c in chunks) {
+                System.arraycopy(c, 0, allShorts, offset, c.size)
+                offset += c.size
+            }
+
+            val floatSamples = FloatArray(allShorts.size)
+            for (i in allShorts.indices) {
+                floatSamples[i] = allShorts[i] / 32768.0f
+            }
+
+            val features = VoiceFeatureExtractor.extractFeatures(floatSamples, sampleRate)
+            val wavFile = File(cacheDir, "rox_utt_${System.currentTimeMillis()}.wav")
+            AudioUtils.writeWavFile(wavFile, allShorts, sampleRate)
+
+            val res = apiClient.transcribeAndVerify(
+                wavFile = wavFile,
+                voiceprintJson = features.vectorJson,
+                pitch = features.pitch,
+                action = "identify",
+                language = "hinglish"
+            )
+
+            wavFile.delete()
+
+            if (!res.success) {
+                updateOrbState("activating", "Network busy • Try again...")
+                delay(1000)
+                resumeRecordingAfterSpeech()
+                return@launch
+            }
+
+            val transcript = res.text.trim()
+
+            // 1. Check for Shutdown Command
+            if (CodeWordMatcher.isShutdownCommand(transcript)) {
+                updateOrbState("closing", "Shutting down Rox...")
+                speakWithPrabhat("Shutting down Rox. Goodbye.") {
+                    shutdownService()
+                }
+                return@launch
+            }
+
+            // 2. Check Code Word if not verified
+            if (!isCodeVerified) {
+                val configuredCode = Prefs.getCodeWord(this@RoxOverlayService)
+                val matched = CodeWordMatcher.isCodeWordMatched(transcript, configuredCode)
+
+                if (matched) {
+                    isCodeVerified = true
+                    updateOrbState("code_verified", "Verified • Rox is ready")
+                    speakWithPrabhat("Code verified. Rox is ready.") {
+                        resumeRecordingAfterSpeech()
+                    }
+                } else {
+                    val displayTxt = if (transcript.isNotEmpty()) "Heard: '$transcript' • Try again" else "Code not recognized"
+                    updateOrbState("activating", displayTxt)
+                    speakWithPrabhat("Code not recognized. Send your code to start.") {
+                        resumeRecordingAfterSpeech()
+                    }
+                }
+            } else {
+                // 3. User Command Handling
+                updateOrbState("listening_cmd", "Received: $transcript")
+                speakWithPrabhat("I heard $transcript") {
+                    resumeRecordingAfterSpeech()
+                }
+            }
+        }
+    }
+
+    private fun cleanUpAudioRecord() {
+        try {
+            if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                audioRecord?.stop()
+            }
+            audioRecord?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            audioRecord = null
         }
     }
 
     private fun shutdownService() {
-        if (overlayView != null && windowManager != null) {
-            try {
-                windowManager?.removeView(overlayView)
-            } catch (_: Exception) {}
-            overlayView = null
+        isListeningLoopActive = false
+        listeningJob?.cancel()
+        listeningJob = null
+        cleanUpAudioRecord()
+        audioPlayer.stop()
+
+        mainHandler.post {
+            if (overlayView != null && windowManager != null) {
+                try {
+                    windowManager?.removeView(overlayView)
+                } catch (_: Exception) {}
+                overlayView = null
+            }
         }
-        try { speechRecognizer?.destroy() } catch (_: Exception) {}
+
         try {
-            tts?.stop()
-            tts?.shutdown()
+            fallbackTts?.stop()
+            fallbackTts?.shutdown()
         } catch (_: Exception) {}
+
+        // Restore JarvisService if it was running before
+        if (wasJarvisServiceRunning) {
+            JarvisService.startListeningService(this)
+        }
+
         stopForeground(true)
         stopSelf()
     }
@@ -417,5 +648,6 @@ class RoxOverlayService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         shutdownService()
+        serviceScope.cancel()
     }
 }

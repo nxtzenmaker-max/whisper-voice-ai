@@ -253,6 +253,39 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
+        <!-- Rox Voice Activation Code Setting -->
+        <LinearLayout
+            android:id="@+id/rowCodeWord"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-medium"
+                android:text="🔑 Rox Code Word:"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvCurrentCodeWord"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:text="Rox 7 (Tap to edit)"
+                android:textColor="@color/cyan_400"
+                android:textSize="12sp" />
+        </LinearLayout>
+
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchBackgroundListening"
             android:layout_width="match_parent"
