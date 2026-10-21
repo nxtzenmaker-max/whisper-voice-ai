@@ -1,11 +1,10 @@
 package com.nxtzenmaker.jarvis
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
-import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 
 @RequiresApi(api = Build.VERSION_CODES.N)
@@ -18,17 +17,23 @@ class RoxTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "Please enable 'Draw Over Other Apps' permission first", Toast.LENGTH_LONG).show()
-            val intent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivityAndCollapse(intent)
-            return
+
+        val intent = Intent(this, RoxTrampolineActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
 
-        // Activate Rox Floating Orb
-        RoxOverlayService.activate(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // Android 14+
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            startActivityAndCollapse(pendingIntent)
+        } else {
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(intent)
+        }
 
         val tile = qsTile
         if (tile != null) {

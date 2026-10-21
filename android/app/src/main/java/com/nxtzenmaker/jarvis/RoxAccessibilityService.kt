@@ -2,6 +2,7 @@ package com.nxtzenmaker.jarvis
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -36,7 +37,10 @@ class RoxAccessibilityService : AccessibilityService() {
             if (volumeDownPressTimes.size >= REQUIRED_PRESSES) {
                 volumeDownPressTimes.clear()
                 vibrateFeedback()
-                RoxOverlayService.activate(applicationContext)
+                val intent = Intent(applicationContext, RoxTrampolineActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                startActivity(intent)
                 return true // Consume event
             }
         }

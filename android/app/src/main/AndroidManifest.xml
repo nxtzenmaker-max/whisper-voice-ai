@@ -37,6 +37,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Zero-delay Transparent Trampoline Activity for Android 12/13/14 Quick Settings Tile -->
+        <activity
+            android:name=".RoxTrampolineActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
         <service
             android:name=".JarvisService"
             android:enabled="true"

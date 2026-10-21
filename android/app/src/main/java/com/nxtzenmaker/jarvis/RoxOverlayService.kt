@@ -1,5 +1,6 @@
 package com.nxtzenmaker.jarvis
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,6 +8,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
@@ -32,6 +35,7 @@ import android.webkit.WebViewClient
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import java.util.Locale
 
 class RoxOverlayService : Service() {
@@ -46,10 +50,14 @@ class RoxOverlayService : Service() {
             val intent = Intent(context, RoxOverlayService::class.java).apply {
                 action = ACTION_ACTIVATE
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
 
@@ -83,7 +91,18 @@ class RoxOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification("Rox Active • Ready"))
+        try {
+            val hasMic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hasMic) {
+                startForeground(NOTIFICATION_ID, buildNotification("Rox Active • Ready"), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification("Rox Active • Ready"))
+            }
+        } catch (_: Exception) {
+            try {
+                startForeground(NOTIFICATION_ID, buildNotification("Rox Active • Ready"))
+            } catch (_: Exception) {}
+        }
 
         if (intent?.action == ACTION_STOP) {
             shutdownService()
