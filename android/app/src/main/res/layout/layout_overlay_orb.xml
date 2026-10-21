@@ -7,8 +7,8 @@
 
     <WebView
         android:id="@+id/overlayWebView"
-        android:layout_width="280dp"
-        android:layout_height="320dp"
+        android:layout_width="165dp"
+        android:layout_height="195dp"
         android:background="@android:color/transparent" />
 
 </FrameLayout>

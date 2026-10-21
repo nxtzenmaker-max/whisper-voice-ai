@@ -30,7 +30,6 @@ import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -137,17 +136,17 @@ class RoxOverlayService : Service() {
 
         mainHandler.postDelayed({
             if (requireCode) {
-                updateOrbState("activating", "Rox Activated • Send code...")
-                speakWithPrabhat("Rox activated, send your code with your voice to start") {
+                updateOrbState("activating", "Code boliye start karne ke liye...")
+                speakEmotional("Arrey boss, Rox active hai! Apna code boliye start karne ke liye.") {
                     startContinuousListening()
                 }
             } else {
-                updateOrbState("code_verified", "Rox Ready • Listening")
-                speakWithPrabhat("Rox activated. Ready for your command.") {
+                updateOrbState("code_verified", "Rox Active • Boliye!")
+                speakEmotional("Arrey boss! Rox hazir hai. Boliye, aaj kya kamaal karna hai?") {
                     startContinuousListening()
                 }
             }
-        }, 400)
+        }, 350)
 
         return START_STICKY
     }
@@ -175,11 +174,12 @@ class RoxOverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        // Compact window bounds to remove any invisible board blocking the screen
         layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
@@ -204,12 +204,12 @@ class RoxOverlayService : Service() {
                         if (!isCodeVerified) {
                             // Instant Tap-To-Unlock fallback
                             isCodeVerified = true
-                            updateOrbState("code_verified", "Verified (Tapped) • Ready")
-                            speakWithPrabhat("Code verified. Rox is ready.") {
+                            updateOrbState("code_verified", "Verified • Ready!")
+                            speakEmotional("Code verified boss! Rox poori tarah ready hai, boliye kya madad karoon?") {
                                 resumeRecordingAfterSpeech()
                             }
                         } else {
-                            updateOrbState("listening_cmd", "Listening for command...")
+                            updateOrbState("code_verified", "Rox sun raha hai... Boliye!")
                         }
                     }
                 }
@@ -219,9 +219,9 @@ class RoxOverlayService : Service() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     if (isCodeVerified) {
-                        updateOrbState("code_verified", "Rox Ready • Command ready")
+                        updateOrbState("code_verified", "Rox Active • Boliye!")
                     } else {
-                        updateOrbState("activating", "Rox Activated • Send code...")
+                        updateOrbState("activating", "Code boliye start karne ke liye...")
                     }
                 }
             }
@@ -229,7 +229,7 @@ class RoxOverlayService : Service() {
             loadUrl("file:///android_asset/orb_overlay.html")
         }
 
-        // Touch & Drag across screen with Slide Down To Turn Off
+        // Drag to reposition + Slide Down To Turn Off
         overlayView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -253,17 +253,17 @@ class RoxOverlayService : Service() {
                         val deltaY = event.rawY - initialTouchY
 
                         // Check if sliding down predominantly to turn off
-                        if (deltaY > 180f && deltaY > kotlin.math.abs(deltaX) * 1.25f) {
+                        if (deltaY > 140f && deltaY > kotlin.math.abs(deltaX) * 1.25f) {
                             if (!isSlidingDownToClose) {
                                 isSlidingDownToClose = true
                                 updateOrbState("closing", "Slide down to close Rox ⬇️")
                             }
-                        } else if (isSlidingDownToClose && deltaY < 120f) {
+                        } else if (isSlidingDownToClose && deltaY < 90f) {
                             isSlidingDownToClose = false
                             if (isCodeVerified) {
-                                updateOrbState("code_verified", "Rox Ready • Listening")
+                                updateOrbState("code_verified", "Rox sun raha hai... Boliye!")
                             } else {
-                                updateOrbState("activating", "Rox Activated • Send code...")
+                                updateOrbState("activating", "Code boliye...")
                             }
                         }
 
@@ -278,10 +278,10 @@ class RoxOverlayService : Service() {
                         val deltaX = event.rawX - initialTouchX
                         val deltaY = event.rawY - initialTouchY
 
-                        if (deltaY > 160f && deltaY > kotlin.math.abs(deltaX) * 1.2f) {
+                        if (deltaY > 130f && deltaY > kotlin.math.abs(deltaX) * 1.2f) {
                             // User slid down to turn off Rox!
-                            updateOrbState("closing", "Shutting down Rox...")
-                            speakWithPrabhat("Shutting down Rox. Goodbye.") {
+                            updateOrbState("closing", "Rox so raha hai...")
+                            speakEmotional("Chaliye boss, Rox ab so raha hai. Jab bhi bulana ho, bas awaaz dijiyega. Alvida!") {
                                 shutdownService()
                             }
                             return true
@@ -311,14 +311,23 @@ class RoxOverlayService : Service() {
         }
     }
 
+    private fun pauseRecordingForSpeech() {
+        isSpeaking = true
+        isRecordingPaused = true
+        try {
+            if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                audioRecord?.stop()
+            }
+        } catch (_: Exception) {}
+    }
+
     /**
-     * Speaks text using Prabhat Neural (+15% rate) with natural voice.
-     * Also pulses the 3D Orb while speaking.
+     * Speaks text using selected emotional voice (Madhur / Swara / Prabhat) with natural cadence.
+     * Automatically pauses mic to prevent loudspeaker echo, and re-arms continuous listening on complete.
      */
-    private fun speakWithPrabhat(text: String, onComplete: (() -> Unit)? = null) {
+    private fun speakEmotional(text: String, onComplete: (() -> Unit)? = null) {
         serviceScope.launch {
-            isSpeaking = true
-            isRecordingPaused = true
+            pauseRecordingForSpeech()
 
             // Pulse the 3D orb while speaking
             val speechAnimJob = launch {
@@ -327,13 +336,17 @@ class RoxOverlayService : Service() {
                     val lvl = (0.35f + 0.35f * kotlin.math.sin(angle)).toFloat()
                     feedAudioLevelToOrb(lvl)
                     angle += 0.35
-                    delay(55)
+                    delay(50)
                 }
                 feedAudioLevelToOrb(0.04f)
             }
 
             try {
-                val ttsUrl = apiClient.getTtsAudioUrl(text, rate = "+15%")
+                val voice = Prefs.getVoiceModel(this@RoxOverlayService)
+                val rate = Prefs.getVoiceRate(this@RoxOverlayService)
+                val pitch = Prefs.DEFAULT_PITCH
+                val ttsUrl = apiClient.getTtsAudioUrl(text, voice = voice, rate = rate, pitch = pitch)
+
                 withContext(Dispatchers.Main) {
                     audioPlayer.playUrl(
                         url = ttsUrl,
@@ -367,7 +380,7 @@ class RoxOverlayService : Service() {
         mainHandler.post {
             if (fallbackTtsReady && fallbackTts != null) {
                 fallbackTts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "FALLBACK_ROX")
-                mainHandler.postDelayed({ onComplete?.invoke() }, 2200)
+                mainHandler.postDelayed({ onComplete?.invoke() }, 2000)
             } else {
                 onComplete?.invoke()
             }
@@ -383,10 +396,28 @@ class RoxOverlayService : Service() {
         }
     }
 
+    private fun initAudioRecord(): Boolean {
+        cleanUpAudioRecord()
+        val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        val bufferSize = maxOf(minBufferSize, 4096)
+        return try {
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                sampleRate,
+                channelConfig,
+                audioFormat,
+                bufferSize
+            )
+            audioRecord?.state == AudioRecord.STATE_INITIALIZED
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     /**
-     * Direct AudioRecord capture: 16kHz PCM mono.
-     * Feeds real-time frequency energy to 3D Orb.
-     * ZERO Google SpeechRecognizer popups or crashes.
+     * Completely continuous, hands-free audio recording.
+     * Zero taps needed. Sensitive voice threshold detects speech effortlessly.
      */
     @SuppressLint("MissingPermission")
     private fun startContinuousListening() {
@@ -395,23 +426,12 @@ class RoxOverlayService : Service() {
         isRecordingPaused = false
 
         listeningJob = serviceScope.launch {
-            val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-            val bufferSize = maxOf(minBufferSize, 4096)
+            if (!initAudioRecord()) {
+                updateOrbState("activating", "Mic Initialization Failed")
+                return@launch
+            }
 
             try {
-                audioRecord = AudioRecord(
-                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                    sampleRate,
-                    channelConfig,
-                    audioFormat,
-                    bufferSize
-                )
-
-                if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                    updateOrbState("activating", "Mic Initialization Failed")
-                    return@launch
-                }
-
                 audioRecord?.startRecording()
 
                 val frameSize = 1024 // ~64ms
@@ -422,20 +442,33 @@ class RoxOverlayService : Service() {
                 var isCollectingSpeech = false
                 var silenceFrames = 0
 
-                val voiceThreshold = 0.030f   // Speech trigger threshold
-                val silenceThreshold = 0.018f // Floor threshold
-                val maxSilenceFrames = 10     // ~640ms silence to conclude utterance
-                val maxSpeechFrames = 80      // ~5.1s maximum utterance
-                val minSpeechFrames = 8       // ~0.5s minimum utterance
+                val voiceThreshold = 0.019f   // Sensitive speech trigger
+                val silenceThreshold = 0.011f // Room silence floor
+                val maxSilenceFrames = 10     // ~640ms silence concludes utterance
+                val maxSpeechFrames = 85      // ~5.4s max utterance
+                val minSpeechFrames = 7       // ~0.45s min speech (filters clicks)
 
                 while (isActive && isListeningLoopActive) {
                     if (isRecordingPaused || isSpeaking || audioPlayer.isPlayingAudio()) {
-                        delay(120)
+                        delay(100)
                         continue
                     }
 
+                    // Check that AudioRecord is actively recording
+                    if (audioRecord?.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                        try {
+                            audioRecord?.startRecording()
+                        } catch (_: Exception) {
+                            delay(100)
+                            continue
+                        }
+                    }
+
                     val read = audioRecord?.read(buffer, 0, frameSize) ?: 0
-                    if (read <= 0) continue
+                    if (read <= 0) {
+                        delay(20)
+                        continue
+                    }
 
                     // Calculate RMS
                     var sum = 0.0
@@ -446,7 +479,7 @@ class RoxOverlayService : Service() {
                     val rms = kotlin.math.sqrt(sum / read).toFloat() / 32768.0f
 
                     // Live feed RMS to 3D WebGL Orb visualizer
-                    val visualLevel = (rms * 4.5f).coerceIn(0.03f, 1.0f)
+                    val visualLevel = (rms * 5.0f).coerceIn(0.03f, 1.0f)
                     feedAudioLevelToOrb(visualLevel)
 
                     if (!isCollectingSpeech) {
@@ -466,9 +499,9 @@ class RoxOverlayService : Service() {
                             silenceFrames = 0
 
                             if (!isCodeVerified) {
-                                updateOrbState("hearing", "Hearing code word...")
+                                updateOrbState("hearing", "Code sun raha hoon...")
                             } else {
-                                updateOrbState("hearing", "Hearing command...")
+                                updateOrbState("hearing", "Rox sun raha hai...")
                             }
                         }
                     } else {
@@ -481,7 +514,6 @@ class RoxOverlayService : Service() {
                         }
 
                         if (silenceFrames >= maxSilenceFrames || speechChunks.size >= maxSpeechFrames) {
-                            // Utterance complete
                             val collectedChunks = ArrayList(speechChunks)
                             isCollectingSpeech = false
                             silenceFrames = 0
@@ -491,9 +523,9 @@ class RoxOverlayService : Service() {
                                 processSpeechUtterance(collectedChunks)
                             } else {
                                 if (!isCodeVerified) {
-                                    updateOrbState("listening_code", "Listening for code word...")
+                                    updateOrbState("listening_code", "Code boliye...")
                                 } else {
-                                    updateOrbState("code_verified", "Listening for command...")
+                                    updateOrbState("code_verified", "Rox sun raha hai... Boliye!")
                                 }
                             }
                         }
@@ -509,20 +541,36 @@ class RoxOverlayService : Service() {
 
     private fun resumeRecordingAfterSpeech() {
         serviceScope.launch {
-            delay(350) // Allow speaker audio to dissipate from room
-            isRecordingPaused = false
-            if (!isCodeVerified) {
-                updateOrbState("listening_code", "Listening for code word...")
-            } else {
-                updateOrbState("code_verified", "Listening for command...")
+            delay(200) // Clear room echo
+            isSpeaking = false
+            try {
+                if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
+                    if (audioRecord?.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                        audioRecord?.startRecording()
+                    }
+                } else {
+                    initAudioRecord()
+                    audioRecord?.startRecording()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                initAudioRecord()
+                try { audioRecord?.startRecording() } catch (_: Exception) {}
+            } finally {
+                isRecordingPaused = false
+                if (isCodeVerified) {
+                    updateOrbState("code_verified", "Rox sun raha hai... Boliye!")
+                } else {
+                    updateOrbState("listening_code", "Code boliye...")
+                }
             }
         }
     }
 
     private fun processSpeechUtterance(chunks: List<ShortArray>) {
         serviceScope.launch(Dispatchers.IO) {
-            isRecordingPaused = true
-            updateOrbState("processing", "Verifying voice...")
+            pauseRecordingForSpeech()
+            updateOrbState("processing", "Soch raha hoon...")
 
             var totalSamples = 0
             for (c in chunks) totalSamples += c.size
@@ -554,7 +602,7 @@ class RoxOverlayService : Service() {
 
             if (!res.success) {
                 updateOrbState("activating", "Network busy • Try again...")
-                delay(1000)
+                delay(800)
                 resumeRecordingAfterSpeech()
                 return@launch
             }
@@ -563,8 +611,8 @@ class RoxOverlayService : Service() {
 
             // 1. Check for Shutdown Command
             if (CodeWordMatcher.isShutdownCommand(transcript)) {
-                updateOrbState("closing", "Shutting down Rox...")
-                speakWithPrabhat("Shutting down Rox. Goodbye.") {
+                updateOrbState("closing", "Rox so raha hai...")
+                speakEmotional("Chaliye boss, Rox ab so raha hai. Jab bhi bulana ho, bas awaaz dijiyega. Alvida!") {
                     shutdownService()
                 }
                 return@launch
@@ -577,14 +625,14 @@ class RoxOverlayService : Service() {
 
                 if (matched) {
                     isCodeVerified = true
-                    updateOrbState("code_verified", "Verified • Rox is ready")
-                    speakWithPrabhat("Code verified. Rox is ready.") {
+                    updateOrbState("code_verified", "Code Verified! Ready")
+                    speakEmotional("Code verified boss! Rox poori tarah ready hai, boliye kya madad karoon?") {
                         resumeRecordingAfterSpeech()
                     }
                 } else {
-                    val displayTxt = if (transcript.isNotEmpty()) "Heard: '$transcript' • Try again" else "Code not recognized"
+                    val displayTxt = if (transcript.isNotEmpty()) "Heard: '$transcript' • Dobara boliye" else "Code samajh nahi aaya"
                     updateOrbState("activating", displayTxt)
-                    speakWithPrabhat("Code not recognized. Send your code to start.") {
+                    speakEmotional("Arey code samajh nahi aaya boss. Ek baar dobara boliye na!") {
                         resumeRecordingAfterSpeech()
                     }
                 }
@@ -593,7 +641,7 @@ class RoxOverlayService : Service() {
                 updateOrbState("processing", "Rox Brain thinking...")
                 val aiReply = GroqBrain.askRox(this@RoxOverlayService, transcript)
                 updateOrbState("listening_cmd", aiReply)
-                speakWithPrabhat(aiReply) {
+                speakEmotional(aiReply) {
                     resumeRecordingAfterSpeech()
                 }
             }

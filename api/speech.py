@@ -6,12 +6,13 @@ import edge_tts
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-        text = query.get('text', ['Haan boss, all systems ready hain.'])[0]
-        rate = query.get('rate', ['+20%'])[0]
-        voice = query.get('voice', ['en-IN-PrabhatNeural'])[0]
+        text = query.get('text', ['Arrey boss, Rox hazir hai. Boliye!'])[0]
+        rate = query.get('rate', ['+5%'])[0]
+        pitch = query.get('pitch', ['+2Hz'])[0]
+        voice = query.get('voice', ['hi-IN-MadhurNeural'])[0]
 
         async def get_audio():
-            comm = edge_tts.Communicate(text, voice, rate=rate)
+            comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
             buf = bytearray()
             async for chunk in comm.stream():
                 if chunk['type'] == 'audio':

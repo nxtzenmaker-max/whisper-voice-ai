@@ -58,24 +58,18 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v2.0-apk
-          name: "ROX Voice Assistant Android APK (v2.0 - Groq AI Brain & Custom Logo)"
+          tag_name: v2.1-apk
+          name: "ROX Voice Assistant Android APK (v2.1 - Emotional Voice & Zero-Tap Mic)"
           body: |
-            ### 🔮 ROX Voice Assistant Android APK (v2.0 - Groq AI Brain & Gesture Dismiss)
+            ### 🔮 ROX Voice Assistant Android APK (v2.1 - Emotional Voice & Zero-Tap Mic)
             
-            ✅ **What's New in v2.0**:
-            - 🤖 **Groq AI Brain Integrated**: Rox is now powered by Groq LPU with Qwen 27B / GPT-OSS! Ask anything (weather, general knowledge, jokes, tech, conversation) and Rox speaks intelligent answers in Prabhat's natural Hindi-English voice!
-            - 🖼️ **New Official Custom Logo**: Installed your custom 1254x1254 logo across launcher icons, mipmaps, and app UI.
-            - 🚫 **Cross (✕) Button Removed**: Overlay is now a clean, unobstructed, floating 3D glowing WebGL orb!
-            - ⬇️ **Slide Down To Turn Off (Swipe-To-Dismiss)**: Simply slide or flick the 3D orb downward to shut down Rox anytime with haptic feedback!
-            - 🎙️ **Prabhat Neural Voice & Internal AudioRecord**: 100% Google popups removed, high-precision Hinglish voice answers, live audio-reactive 3D orb vibration.
-            - 🔑 **Smart Phonetic Tolerance & Tap-to-Unlock**: Fast unlock with voice ("Rox 7", "Rocs", "7", etc.) or single tap on the orb.
-            
-            📥 **How to Install**:
-            1. Download `Rox-Voice-Assistant.apk` below.
-            2. Tap "Install" or "Update".
-            3. Grant "Display over other apps", "Microphone", and "Accessibility" (Volume 3x trigger).
-            4. Drag "Rox AI" into Quick Settings or press Volume Down 3 times!
+            ✅ **Major Enhancements**:
+            - 🎭 **Emotional Voice Upgrade (Madhur Neural)**: Switched to Microsoft's native Hindi male neural voice (`hi-IN-MadhurNeural`) with dynamic pitch (+2Hz) and human conversational speed (+5%). Sounds warm, alive, energetic, and expressive!
+            - 🗣️ **Zero-Tap Continuous Hands-Free Conversation**: No more tapping the orb to speak! As soon as Rox finishes speaking an answer, it automatically resumes listening for your next question seamlessly.
+            - 📏 **Invisible Board Removed / Compact Floating Orb**: Reduced overlay window to a sleek 165dp x 195dp hugging the 3D orb. Touches outside the orb now pass through freely to underlying apps with zero blocking!
+            - 🤖 **Charismatic AI Personality**: Rox speaks like a witty, intelligent, brotherly companion ("Arrey waah boss!", "Haha bilkul!", "Arey fikar mat karo...").
+            - 🎙️ **Voice Selector in Settings**: Easily switch between Madhur (Emotional Hindi), Swara (Expressive Female), and Prabhat (Tech Male) anytime.
+            - ⬇️ **Slide Down to Turn Off**: Smooth gesture dismiss by sliding the 3D orb downward.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.

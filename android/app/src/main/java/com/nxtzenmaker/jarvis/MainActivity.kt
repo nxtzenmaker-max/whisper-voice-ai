@@ -161,7 +161,53 @@ class MainActivity : AppCompatActivity() {
         binding.rowCodeWord.setOnClickListener(openCodeDialog)
         binding.tvCurrentCodeWord.setOnClickListener(openCodeDialog)
 
+        updateVoiceDisplay()
+        val openVoiceDialog = View.OnClickListener { showVoiceSelectorDialog() }
+        binding.rowVoiceModel.setOnClickListener(openVoiceDialog)
+        binding.tvCurrentVoice.setOnClickListener(openVoiceDialog)
+
         binding.tvBackendUrl.setOnClickListener { showGroqApiKeyDialog() }
+    }
+
+    private fun updateVoiceDisplay() {
+        val voice = Prefs.getVoiceModel(this)
+        val label = when (voice) {
+            "hi-IN-MadhurNeural" -> "Madhur (Emotional Hindi)"
+            "hi-IN-SwaraNeural" -> "Swara (Expressive Female)"
+            "en-IN-PrabhatNeural" -> "Prabhat (Tech Male)"
+            "en-IN-NeerjaExpressiveNeural" -> "Neerja (Expressive Female)"
+            else -> voice
+        }
+        binding.tvCurrentVoice.text = label
+    }
+
+    private fun showVoiceSelectorDialog() {
+        val voiceOptions = arrayOf(
+            "Madhur (Deep & Emotional Hindi Male - Recommended)",
+            "Swara (Expressive & Warm Hindi Female)",
+            "Prabhat (Tech Indian Male)",
+            "Neerja (Expressive English-Hindi Female)"
+        )
+        val voiceValues = arrayOf(
+            "hi-IN-MadhurNeural",
+            "hi-IN-SwaraNeural",
+            "en-IN-PrabhatNeural",
+            "en-IN-NeerjaExpressiveNeural"
+        )
+        val currentVoice = Prefs.getVoiceModel(this)
+        val selectedIndex = voiceValues.indexOf(currentVoice).let { if (it >= 0) it else 0 }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Select Rox Voice & Emotion")
+            .setSingleChoiceItems(voiceOptions, selectedIndex) { dialog, which ->
+                val chosenVoice = voiceValues[which]
+                Prefs.setVoiceModel(this, chosenVoice)
+                updateVoiceDisplay()
+                Toast.makeText(this, "Voice set to ${voiceOptions[which].split(" (")[0]}", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun showGroqApiKeyDialog() {
