@@ -3,12 +3,17 @@ package com.nxtzenmaker.jarvis
 object CodeWordMatcher {
 
     /**
-     * Intelligently checks if the spoken transcript matches the expected code word.
+     * Intelligently checks if the spoken transcript matches the expected code word or wake word.
      * Handles common phonetics and mishearings (e.g. Rox -> Rocs, Rocks, Rock, 7 -> seven, saat).
      */
     fun isCodeWordMatched(transcript: String, expectedCode: String): Boolean {
         val raw = transcript.lowercase().trim()
         if (raw.isEmpty()) return false
+
+        // Direct wake command check (e.g. "Rox on", "Rox wake up", "Rox start")
+        if (isWakeCommand(raw)) {
+            return true
+        }
 
         val normalizedTranscript = normalize(raw)
         val normalizedExpected = normalize(expectedCode)
@@ -46,26 +51,43 @@ object CodeWordMatcher {
     }
 
     /**
-     * Checks if the transcript contains a shutdown command.
+     * Checks if the transcript contains a wake/turn-on command (e.g. "Rox on", "Rox start", "Rox chalu").
      */
-    fun isShutdownCommand(transcript: String): Boolean {
-        val lower = transcript.lowercase().trim()
-        val shutdownPhrases = listOf(
-            "rox close", "rox stop", "rox shutdown",
-            "band ho jao", "band ho ja", "so jao",
-            "close", "shutdown", "stop", "exit", "shut down",
-            "band karo", "band kar do"
+    fun isWakeCommand(transcript: String): Boolean {
+        val norm = normalize(transcript)
+        val wakePhrases = listOf(
+            "rox on", "rox start", "rox wake", "rox wake up",
+            "rox chalu", "rox chalu ho jao", "rox suno", "rox 7",
+            "turn on rox", "chalu ho jao", "wake up rox", "wake up"
         )
-        return shutdownPhrases.any { lower.contains(it) }
+        return wakePhrases.any { norm.contains(it) } || norm == "rox on" || norm == "on"
     }
 
-    private fun normalize(text: String): String {
+    /**
+     * Checks if the transcript contains a shutdown/turn-off command (e.g. "Rox off", "Rox stop", "band ho jao").
+     */
+    fun isShutdownCommand(transcript: String): Boolean {
+        val norm = normalize(transcript)
+        val shutdownPhrases = listOf(
+            "rox off", "rox of", "rox stop", "rox close", "rox shutdown",
+            "rox shut down", "rox sleep", "rox chup", "rox band",
+            "band ho jao", "band ho ja", "band karo", "band kar do", "band ho",
+            "so jao", "so ja", "chup ho jao", "chup raho",
+            "turn off rox", "turn off", "shutdown", "exit", "quit",
+            "alvida", "bye rox", "bye bye"
+        )
+        return shutdownPhrases.any { norm.contains(it) } || norm == "rox off" || norm == "off"
+    }
+
+    fun normalize(text: String): String {
         return text.lowercase()
             .replace(Regex("[^a-z0-9\\s]"), " ")
             // Common Whisper and speech recognition aliases for "rox"
-            .replace(Regex("\\b(rox|rocs|rocks|rock|rok|roxx|raks|ross|brocks|box|fox)\\b"), "rox")
+            .replace(Regex("\\b(rox|rocs|rocks|rock|rok|roxx|raks|ross|brocks|box|fox|roks)\\b"), "rox")
             // Common number words
             .replace(Regex("\\b(seven|saat|sat|sath)\\b"), "7")
+            // Treat "of" after "rox" as "off"
+            .replace(Regex("\\brox of\\b"), "rox off")
             .replace(Regex("\\s+"), " ")
             .trim()
     }

@@ -609,36 +609,45 @@ class RoxOverlayService : Service() {
 
             val transcript = res.text.trim()
 
-            // 1. Check for Shutdown Command
+            // 1. Check for Shutdown Command (e.g. "Rox off", "band ho jao", "so jao")
             if (CodeWordMatcher.isShutdownCommand(transcript)) {
-                updateOrbState("closing", "Rox so raha hai...")
-                speakEmotional("Chaliye boss, Rox ab so raha hai. Jab bhi bulana ho, bas awaaz dijiyega. Alvida!") {
+                updateOrbState("closing", "Rox OFF ho raha hai...")
+                speakEmotional("Theek hai boss! Rox off ho raha hai... Phir milenge, alvida!") {
                     shutdownService()
                 }
                 return@launch
             }
 
-            // 2. Check Code Word if not verified
+            // 2. Check Code Word if not verified (e.g. "Rox on", "Rox 7", "Rox start")
             if (!isCodeVerified) {
                 val configuredCode = Prefs.getCodeWord(this@RoxOverlayService)
                 val matched = CodeWordMatcher.isCodeWordMatched(transcript, configuredCode)
 
                 if (matched) {
                     isCodeVerified = true
-                    updateOrbState("code_verified", "Code Verified! Ready")
-                    speakEmotional("Code verified boss! Rox poori tarah ready hai, boliye kya madad karoon?") {
+                    updateOrbState("code_verified", "Rox ON • Ready!")
+                    speakEmotional("Haan boss! Rox ON ho gaya hai... Boliye, kya madad karoon?") {
                         resumeRecordingAfterSpeech()
                     }
                 } else {
                     val displayTxt = if (transcript.isNotEmpty()) "Heard: '$transcript' • Dobara boliye" else "Code samajh nahi aaya"
                     updateOrbState("activating", displayTxt)
-                    speakEmotional("Arey code samajh nahi aaya boss. Ek baar dobara boliye na!") {
+                    speakEmotional("Arey code samajh nahi aaya boss... 'Rox ON' ya 'Rox 7' boliye na!") {
                         resumeRecordingAfterSpeech()
                     }
                 }
             } else {
+                // Already active - check if user said "rox on" or wake command
+                if (CodeWordMatcher.isWakeCommand(transcript)) {
+                    updateOrbState("code_verified", "Rox ON • Active!")
+                    speakEmotional("Haan boss! Rox ON hai aur aapko hi sun raha hai... Boliye kya baat hai?") {
+                        resumeRecordingAfterSpeech()
+                    }
+                    return@launch
+                }
+
                 // 3. User Query / Command -> Rox AI Brain (Groq API)
-                updateOrbState("processing", "Rox Brain thinking...")
+                updateOrbState("processing", "Rox Brain soch raha hai...")
                 val aiReply = GroqBrain.askRox(this@RoxOverlayService, transcript)
                 updateOrbState("listening_cmd", aiReply)
                 speakEmotional(aiReply) {

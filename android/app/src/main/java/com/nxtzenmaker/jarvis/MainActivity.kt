@@ -265,7 +265,7 @@ class MainActivity : AppCompatActivity() {
 
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Set Rox Activation Code Word")
-            .setMessage("Jab Rox shuru hoga, ye secret code voice se bolna hoga. Default: 'rox 7'")
+            .setMessage("Voice Code Commands:\n• Chalu karne ke liye: 'Rox on' ya 'Rox 7'\n• Band karne ke liye: 'Rox off', 'band ho jao' ya 'so jao'\n\nAap apna custom code bhi rakh sakte hain (Default: 'rox 7'):")
             .setView(input)
             .setPositiveButton("Save") { _, _ ->
                 val newCode = input.text.toString().trim()

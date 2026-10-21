@@ -1,58 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { spawn } from 'child_process';
-
-function generateEmotionalTTS(
-  text: string,
-  voice: string = 'hi-IN-MadhurNeural',
-  rate: string = '+5%',
-  pitch: string = '+2Hz'
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const py = spawn('python3', [
-      '-c',
-      `
-import sys, asyncio, edge_tts
-async def main():
-    text = sys.argv[1]
-    voice = sys.argv[2]
-    rate = sys.argv[3]
-    pitch = sys.argv[4]
-    comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
-    async for chunk in comm.stream():
-        if chunk['type'] == 'audio':
-            sys.stdout.buffer.write(chunk['data'])
-asyncio.run(main())
-      `,
-      text,
-      voice,
-      rate,
-      pitch,
-    ]);
-
-    const chunks: Buffer[] = [];
-    py.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
-    py.on('error', reject);
-    py.on('close', (code) => {
-      if (code === 0 && chunks.length > 0) {
-        resolve(Buffer.concat(chunks));
-      } else {
-        reject(new Error('Python exited with code ' + code));
-      }
-    });
-  });
-}
+import { synthesizeEdgeTTS } from '@/lib/edge-tts';
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const text = url.searchParams.get('text') || 'Arrey boss! Rox hazir hai. Boliye, aaj kya kamaal karna hai?';
+    const rawText = url.searchParams.get('text') || 'Arrey boss! Rox hazir hai. Boliye, aaj kya kamaal karna hai?';
     const voice = url.searchParams.get('voice') || 'hi-IN-MadhurNeural';
-    const rate = url.searchParams.get('rate') || '+5%';
+    const rate = url.searchParams.get('rate') || '+4%';
     const pitch = url.searchParams.get('pitch') || '+2Hz';
 
-    // 1. Primary: Direct high-speed Python Edge-TTS (hi-IN-MadhurNeural with natural prosody)
+    // Conversational text cleanup for human speech prosody
+    const cleanText = rawText
+      .replace(/[*#_`~]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 1. Primary: Pure Node.js Edge-TTS with Sec-MS-GEC v2 (Native on Vercel)
     try {
-      const audioBuffer = await generateEmotionalTTS(text, voice, rate, pitch);
+      const audioBuffer = await synthesizeEdgeTTS(cleanText, voice, rate, pitch);
       return new NextResponse(new Uint8Array(audioBuffer), {
         headers: {
           'Content-Type': 'audio/mpeg',
@@ -60,35 +25,13 @@ export async function GET(req: NextRequest) {
           'Access-Control-Allow-Origin': '*',
         },
       });
-    } catch (pyErr) {
-      console.warn('Local Python edge-tts not available, checking Vercel /api/speech:', pyErr);
+    } catch (edgeErr) {
+      console.warn('Edge-TTS error:', edgeErr);
     }
 
-    // 2. Secondary: Vercel Python Serverless Endpoint (/api/speech)
-    try {
-      const origin = url.origin;
-      const speechRes = await fetch(
-        `${origin}/api/speech?voice=${encodeURIComponent(voice)}&rate=${encodeURIComponent(
-          rate
-        )}&pitch=${encodeURIComponent(pitch)}&text=${encodeURIComponent(text)}`
-      );
-      if (speechRes.ok) {
-        const buffer = await speechRes.arrayBuffer();
-        return new NextResponse(buffer, {
-          headers: {
-            'Content-Type': 'audio/mpeg',
-            'Cache-Control': 'public, max-age=86400',
-            'Access-Control-Allow-Origin': '*',
-          },
-        });
-      }
-    } catch (speechErr) {
-      console.warn('Vercel /api/speech error:', speechErr);
-    }
-
-    // 3. Fallback: Google TTS
+    // 2. Secondary fallback: Google TTS
     const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=hi&client=tw-ob&q=${encodeURIComponent(
-      text.slice(0, 200)
+      cleanText.slice(0, 200)
     )}`;
     const fallbackRes = await fetch(fallbackUrl, {
       headers: {
@@ -103,6 +46,7 @@ export async function GET(req: NextRequest) {
         headers: {
           'Content-Type': 'audio/mpeg',
           'Cache-Control': 'public, max-age=86400',
+          'Access-Control-Allow-Origin': '*',
         },
       });
     }

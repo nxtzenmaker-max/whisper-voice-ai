@@ -58,23 +58,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v2.1-apk
-          name: "ROX Voice Assistant Android APK (v2.1 - Emotional Voice & Zero-Tap Mic)"
+          tag_name: v2.2-apk
+          name: "ROX Voice Assistant Android APK (v2.2 - Pure Neural Human Voice & 'Rox on/off' Voice Codes)"
           body: |
-            ### 🔮 ROX Voice Assistant Android APK (v2.1 - Emotional Voice & Zero-Tap Mic)
+            ### 🔮 ROX Voice Assistant Android APK (v2.2 - Pure Neural Voice & Code Words)
             
-            ✅ **Major Enhancements**:
-            - 🎭 **Emotional Voice Upgrade (Madhur Neural)**: Switched to Microsoft's native Hindi male neural voice (`hi-IN-MadhurNeural`) with dynamic pitch (+2Hz) and human conversational speed (+5%). Sounds warm, alive, energetic, and expressive!
-            - 🗣️ **Zero-Tap Continuous Hands-Free Conversation**: No more tapping the orb to speak! As soon as Rox finishes speaking an answer, it automatically resumes listening for your next question seamlessly.
-            - 📏 **Invisible Board Removed / Compact Floating Orb**: Reduced overlay window to a sleek 165dp x 195dp hugging the 3D orb. Touches outside the orb now pass through freely to underlying apps with zero blocking!
-            - 🤖 **Charismatic AI Personality**: Rox speaks like a witty, intelligent, brotherly companion ("Arrey waah boss!", "Haha bilkul!", "Arey fikar mat karo...").
-            - 🎙️ **Voice Selector in Settings**: Easily switch between Madhur (Emotional Hindi), Swara (Expressive Female), and Prabhat (Tech Male) anytime.
-            - ⬇️ **Slide Down to Turn Off**: Smooth gesture dismiss by sliding the 3D orb downward.
+            ✅ **Major Enhancements in v2.2**:
+            - 🎙️ **Direct Pure Neural Edge-TTS Engine**: Fixed the monotone "reading text like a robot" issue! Powered by pure Node.js Edge-TTS engine with DRM Sec-MS-GEC v2 support. Generates rich, alive, human-like Indian neural voice (`hi-IN-MadhurNeural`) with zero robotic fallback.
+            - 🗣️ **Official Voice Code Words Supported**:
+              - **Turn ON / Wake**: *"Rox on"*, *"Rox 7"*, *"Rox start"*, *"Rox chalu ho jao"*, *"Rox suno"*.
+              - **Turn OFF / Sleep**: *"Rox off"*, *"Rox band ho jao"*, *"Rox stop"*, *"Rox close"*, *"so jao"*, *"alvida"*.
+            - 💬 **Human Conversational Tone**: Rox now speaks like a real Indian buddy/brother on a phone call with natural breathing pauses (`...`, `,`) and colloquial warmth rather than reading written paragraphs.
+            - 📏 **Zero-Tap Continuous Hands-Free & Zero Ghost Board**: Fluid hands-free continuous conversations with compact overlay bounds.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.
             2. Tap "Install" or "Update".
-            3. Grant "Display over other apps", "Microphone", and "Accessibility" (Volume 3x trigger).
+            3. Grant "Display over other apps", "Microphone", and "Accessibility".
             4. Drag "Rox AI" into Quick Settings or press Volume Down 3 times!
           draft: false
           prerelease: false
