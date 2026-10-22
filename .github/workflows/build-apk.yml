@@ -58,29 +58,29 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v2.6-apk
-          name: "ROX Voice Assistant Android APK (v2.6 - ElevenLabs Ultra-Emotional Voice)"
+          tag_name: v2.7-apk
+          name: "ROX Voice Assistant Android APK (v2.7 - Devanagari Hindi Diction & Snappy 1.15x Speed)"
           body: |
-            ### 🎙️ ROX Voice Assistant Android APK (v2.6 - ElevenLabs Ultra-Emotional Voice)
+            ### 🎙️ ROX Voice Assistant Android APK (v2.7 - Devanagari Hindi Diction & 1.15x Speed)
             
-            ✅ **Major Enhancements in v2.6**:
+            ✅ **Major Enhancements in v2.7**:
+            - 🇮🇳 **Flawless Indian Hindi Diction (Devanagari Script Engine)**:
+              - AI Brain aur System Responses ab natural Devanagari Hindi me render hote hain jisse ElevenLabs Multilingual v2.5 English accent chhod kar **100% native Indian human pronunciation aur emotions** se bolta hai!
+              - Zero foreign accent on common Indian colloquial words (*"अरे भाई!", "बिल्कुल यार", "व्हाट्सएप", "मैसेज"*).
+            - ⚡ **Snappy 1.15x Speaking Speed**:
+              - Speech synthesis speed ko naturally 1.15x boost kiya gaya hai taaki Rox lazy/slow na lage balki energetic aur snappy lage.
             - 🎭 **ElevenLabs Ultra-Emotional TTS Integration**:
-              - Rox ab neutral/robotic nahi balki **insan ki tarah emotional, expressive aur natural Hinglish/Hindi** bolega!
-              - Powered by **ElevenLabs Turbo v2.5** (< 250ms ultra-low latency direct playback).
-              - Default voice: **Adam** (Deep, Charismatic & Emotional Male).
-              - Other voices selectable from settings: **Rachel** (Warm Female), **Antoni** (Energetic Male), **Bella** (Expressive Female), **Daniel** (Deep Male).
-              - Seamless multi-layer fallback: ElevenLabs ➔ Edge-TTS (`hi-IN-MadhurNeural`) ➔ Local Android TTS. Rox kabhi chup ya hang nahi hoga!
+              - Default voice: **Adam** (Deep & Charismatic).
+              - Also available: Rachel, Antoni, Bella, Daniel, plus Edge-TTS Madhur & Swara.
             - 💬 **WhatsApp Direct Voice Messaging & Auto-Send**:
-              - Phone number ya Saved Contact name bol kar seedha message bhejein, auto-send button tap hota hai.
+              - Phone number ya Contact name bol kar seedha message bhejein.
             - 📱 **Full Voice Screen Controls**:
               - Home, Back, Recents, Notifications, Quick Settings, Screenshot, Screen Lock, Scroll, Torch, Volume.
-            - 🧼 **Clean Minimal Orb (150dp x 150dp)** with zero screen blockage.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.
             2. Tap "Install" or "Update".
-            3. Tap Voice row in the app to switch between Adam, Rachel, Antoni, Bella, or Madhur.
-            4. Start talking with Rox!
+            3. Enjoy natural, fast Hindi conversations with Rox!
           draft: false
           prerelease: false
           files: Rox-Voice-Assistant.apk

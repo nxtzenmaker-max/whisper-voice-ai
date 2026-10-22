@@ -556,7 +556,7 @@ class MainActivity : AppCompatActivity() {
                     binding.tvModeBadge.text = "IDENTIFY"
                     binding.tvSpeakerStatus.text = "Aap (Owner) - Enrolled (3/3) ✅"
                     binding.tvBiometricDetail.text = "Biometric Voiceprint 3 samples se lock ho gaya! Ab ROX sirf AAPKO reply dega."
-                    replyText = "Aapki aawaz 3 samples ke sath register ho gayi hai boss. Ab Rox sirf aapki aawaz pehchanega."
+                    replyText = "आपकी आवाज़ 3 सैंपल्स के साथ रजिस्टर हो गई है भाई। अब रॉक्स सिर्फ आपकी आवाज़ पहचानेगा।"
                 }
 
                 binding.tvJarvisReply.text = "\"$replyText\""
@@ -592,7 +592,7 @@ class MainActivity : AppCompatActivity() {
                 val pitchInfo = if (res.pitch > 0) "Pitch: ${res.pitch}Hz • " else ""
                 binding.tvBiometricDetail.text = "$pitchInfo${res.detail.ifBlank { "Owner identity confirmed." }}"
 
-                val replyText = "Haan boss, Rox online hai. Aapki aawaz verify ho gayi hai."
+                val replyText = "हाँ भाई, रॉक्स ऑनलाइन है। आपकी आवाज़ वेरिफाई हो गई है।"
                 binding.tvJarvisReply.text = "\"$replyText\""
                 val activeVoice = Prefs.getVoiceModel(this@MainActivity)
                 val elevenKey = Prefs.getElevenLabsApiKey(this@MainActivity)

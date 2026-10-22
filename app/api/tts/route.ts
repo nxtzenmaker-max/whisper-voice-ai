@@ -4,9 +4,9 @@ import { synthesizeEdgeTTS } from '@/lib/edge-tts';
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const rawText = url.searchParams.get('text') || 'Arrey boss! Rox hazir hai. Boliye, aaj kya kamaal karna hai?';
+    const rawText = url.searchParams.get('text') || 'अरे भाई! रॉक्स हाज़िर है। बोलिए आज क्या करना है?';
     const voice = url.searchParams.get('voice') || 'eleven_adam';
-    const rate = url.searchParams.get('rate') || '+4%';
+    const rate = url.searchParams.get('rate') || '+12%';
     const pitch = url.searchParams.get('pitch') || '+2Hz';
     const elevenKey =
       req.headers.get('x-elevenlabs-key') ||
@@ -46,8 +46,9 @@ export async function GET(req: NextRequest) {
               model_id: 'eleven_turbo_v2_5',
               voice_settings: {
                 stability: 0.5,
-                similarity_boost: 0.8,
+                similarity_boost: 0.85,
                 style: 0.15,
+                speed: 1.15,
                 use_speaker_boost: true,
               },
             }),

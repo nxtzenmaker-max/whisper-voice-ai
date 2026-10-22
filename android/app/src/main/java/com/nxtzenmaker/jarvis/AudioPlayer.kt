@@ -41,7 +41,7 @@ class AudioPlayer(private val context: Context? = null) {
         voice: String,
         elevenApiKey: String = "",
         baseUrl: String = "https://whisper-voice-ai.vercel.app",
-        rate: String = "+5%",
+        rate: String = "+12%",
         pitch: String = "+2Hz",
         onStart: (() -> Unit)? = null,
         onComplete: (() -> Unit)? = null,
@@ -94,8 +94,9 @@ class AudioPlayer(private val context: Context? = null) {
                 put("model_id", "eleven_turbo_v2_5")
                 val voiceSettings = JSONObject().apply {
                     put("stability", 0.5)
-                    put("similarity_boost", 0.8)
+                    put("similarity_boost", 0.85)
                     put("style", 0.15)
+                    put("speed", 1.15)
                     put("use_speaker_boost", true)
                 }
                 put("voice_settings", voiceSettings)

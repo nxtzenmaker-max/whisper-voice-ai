@@ -13,7 +13,7 @@ object Prefs {
     private const val KEY_V26_VOICE_MIGRATED = "key_v26_voice_migrated"
 
     const val DEFAULT_VOICE = "eleven_adam"
-    const val DEFAULT_RATE = "+5%"
+    const val DEFAULT_RATE = "+12%"
     const val DEFAULT_PITCH = "+2Hz"
 
     // Default ElevenLabs TTS API key (Base64 encoded to protect during git push)

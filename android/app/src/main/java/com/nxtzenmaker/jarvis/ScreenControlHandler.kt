@@ -42,80 +42,80 @@ object ScreenControlHandler {
                 }
                 context.startActivity(intent)
             }
-            return "Ji boss, Home screen par aa gaye!"
+            return "हाँ भाई, होम स्क्रीन पर आ गए!"
         }
 
         // 2. Back Action
         if (matchesAny(norm, "back", "back jao", "go back", "peeche jao", "peeche karo", "wapas jao")) {
             val ok = accessibility?.goBack() ?: false
-            return if (ok) "Back kar diya boss!" else "Back action execute nahi ho paya boss."
+            return if (ok) "बैक कर दिया भाई!" else "बैक नहीं हो पाया भाई।"
         }
 
         // 3. Recent Apps / Multitask
         if (matchesAny(norm, "recent", "recent apps", "recent apps kholo", "app switcher", "multitask", "apps dikhao")) {
             val ok = accessibility?.openRecents() ?: false
-            return if (ok) "Recent apps khol diye boss!" else "Recent apps open nahi ho paya."
+            return if (ok) "रिसेंट ऐप्स खोल दिए भाई!" else "रिसेंट ऐप्स ओपन नहीं हो पाए।"
         }
 
         // 4. Notifications Panel
         if (matchesAny(norm, "notification", "notifications", "notification panel", "notification shade", "messages dikhao")) {
             val ok = accessibility?.openNotifications() ?: false
-            return if (ok) "Notification panel open kar diya!" else "Notifications open nahi ho paya."
+            return if (ok) "नोटिफिकेशन पैनल खोल दिया!" else "नोटिफिकेशन ओपन नहीं हो पाया।"
         }
 
         // 5. Quick Settings
         if (matchesAny(norm, "quick settings", "control center", "toggles kholo", "shortcuts dikhao")) {
             val ok = accessibility?.openQuickSettings() ?: false
-            return if (ok) "Quick settings open kar diye boss!" else "Quick settings open nahi ho paya."
+            return if (ok) "क्विक सेटिंग्स खोल दी भाई!" else "क्विक सेटिंग्स ओपन नहीं हो पाई।"
         }
 
         // 6. Screenshot
         if (matchesAny(norm, "screenshot", "screen shot", "screenshot lo", "photo lo screen ki", "screen capture")) {
             val ok = accessibility?.takeScreenshot() ?: false
-            return if (ok) "Screenshot le liya boss!" else "Screenshot lene ke liye Accessibility permission zaroori hai boss."
+            return if (ok) "स्क्रीनशॉट ले लिया भाई!" else "स्क्रीनशॉट लेने के लिए एक्सेसिबिलिटी परमिशन ज़रूरी है भाई।"
         }
 
         // 7. Lock Screen / Screen Off
         if (matchesAny(norm, "screen lock", "lock screen", "phone lock karo", "screen band karo", "screen off", "lock karo")) {
             val ok = accessibility?.lockScreen() ?: false
-            return if (ok) "Screen lock kar di boss!" else "Screen lock karne ke liye Accessibility permission zaroori hai."
+            return if (ok) "स्क्रीन लॉक कर दी भाई!" else "स्क्रीन लॉक करने के लिए एक्सेसिबिलिटी परमिशन चाहिए।"
         }
 
         // 8. Scroll Down
         if (matchesAny(norm, "scroll down", "neeche scroll", "neeche karo", "scroll neeche", "down scroll")) {
             val ok = accessibility?.scrollDown() ?: false
-            return if (ok) "Neeche scroll kar diya!" else null
+            return if (ok) "नीचे स्क्रॉल कर दिया!" else null
         }
 
         // 9. Scroll Up
         if (matchesAny(norm, "scroll up", "upar scroll", "upar karo", "scroll upar", "up scroll")) {
             val ok = accessibility?.scrollUp() ?: false
-            return if (ok) "Upar scroll kar diya!" else null
+            return if (ok) "ऊपर स्क्रॉल कर दिया!" else null
         }
 
         // 10. Torch / Flashlight
         if (matchesAny(norm, "torch on", "torch chalu", "flashlight on", "batti jalao", "light on", "torch jalao")) {
             toggleTorch(context, true)
-            return "Torch on kar di boss!"
+            return "टॉर्च चालू कर दी भाई!"
         }
         if (matchesAny(norm, "torch off", "torch band", "flashlight off", "batti bujhao", "light off", "torch bujhao")) {
             toggleTorch(context, false)
-            return "Torch band kar di boss!"
+            return "टॉर्च बंद कर दी भाई!"
         }
 
         // 11. Volume Controls
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         if (matchesAny(norm, "volume up", "volume badhao", "aawaz badhao", "aawaaz badhao", "sound badhao")) {
             audioManager?.adjustVolume(AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
-            return "Volume badha diya boss!"
+            return "वॉल्यूम बढ़ा दिया भाई!"
         }
         if (matchesAny(norm, "volume down", "volume kam karo", "aawaz kam karo", "aawaaz kam karo", "sound kam karo")) {
             audioManager?.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
-            return "Volume kam kar diya!"
+            return "वॉल्यूम कम कर दिया!"
         }
         if (matchesAny(norm, "mute", "silent karo", "aawaz band karo", "aawaaz band karo")) {
             audioManager?.adjustVolume(AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
-            return "Volume mute kar diya boss!"
+            return "वॉल्यूम म्यूट कर दिया भाई!"
         }
 
         // 12. App Launchers ("WhatsApp kholo", "YouTube chalao", etc.)
@@ -174,7 +174,7 @@ object ScreenControlHandler {
                 val cleanPhone = if (cleanDigits.length == 10) "91$cleanDigits" else cleanDigits
                 return sendWhatsAppDirect(context, cleanPhone, contactName, message)
             } else {
-                return "Boss, contacts me '$contactName' ka number nahi mila. Aap direct number bol kar message bhej sakte hain jaise: 'WhatsApp par 9876543210 ko message bhejo'."
+                return "भाई, कॉन्टैक्ट्स में '$contactName' का नंबर नहीं मिला। आप डायरेक्ट नंबर बोल कर भी मैसेज भेज सकते हैं।"
             }
         }
 
@@ -209,7 +209,7 @@ object ScreenControlHandler {
             RoxAccessibilityService.instance?.scheduleWhatsAppAutoSend()
 
             context.startActivity(intent)
-            return "Ji boss, $displayName ko WhatsApp par message bhej diya!"
+            return "हाँ भाई, $displayName को व्हाट्सएप पर मैसेज भेज दिया!"
         } catch (e: Exception) {
             e.printStackTrace()
             // Generic browser/WhatsApp fallback
@@ -220,9 +220,9 @@ object ScreenControlHandler {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(intent)
-                return "Ji boss, $displayName ke liye WhatsApp chat open kar di hai!"
+                return "हाँ भाई, $displayName के लिए चैट ओपन कर दी है!"
             } catch (_: Exception) {
-                return "WhatsApp open nahi ho paya boss. Please check karein ki phone me WhatsApp installed hai."
+                return "व्हाट्सएप ओपन नहीं हो पाया भाई। चेक करें कि व्हाट्सएप इंस्टॉल है या नहीं।"
             }
         }
     }

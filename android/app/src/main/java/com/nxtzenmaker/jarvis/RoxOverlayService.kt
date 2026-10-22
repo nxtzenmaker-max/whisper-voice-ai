@@ -137,12 +137,12 @@ class RoxOverlayService : Service() {
         mainHandler.postDelayed({
             if (requireCode) {
                 updateOrbState("activating", "Code boliye start karne ke liye...")
-                speakEmotional("Arrey boss, Rox active hai! Apna code boliye start karne ke liye.") {
+                speakEmotional("अरे भाई, रॉक्स एक्टिव है! अपना कोड बोलिए स्टार्ट करने के लिए।") {
                     startContinuousListening()
                 }
             } else {
                 updateOrbState("code_verified", "Rox Active • Boliye!")
-                speakEmotional("Arrey boss! Rox hazir hai. Boliye, aaj kya kamaal karna hai?") {
+                speakEmotional("अरे भाई! रॉक्स हाज़िर है। बोलिए आज क्या कमाल करना है?") {
                     startContinuousListening()
                 }
             }
@@ -205,7 +205,7 @@ class RoxOverlayService : Service() {
                             // Instant Tap-To-Unlock fallback
                             isCodeVerified = true
                             updateOrbState("code_verified", "Verified • Ready!")
-                            speakEmotional("Code verified boss! Rox poori tarah ready hai, boliye kya madad karoon?") {
+                            speakEmotional("कोड वेरिफाई हो गया भाई! रॉक्स पूरी तरह रेडी है, बताओ क्या मदद करूँ?") {
                                 resumeRecordingAfterSpeech()
                             }
                         } else {
@@ -281,7 +281,7 @@ class RoxOverlayService : Service() {
                         if (deltaY > 130f && deltaY > kotlin.math.abs(deltaX) * 1.2f) {
                             // User slid down to turn off Rox!
                             updateOrbState("closing", "Rox so raha hai...")
-                            speakEmotional("Chaliye boss, Rox ab so raha hai. Jab bhi bulana ho, bas awaaz dijiyega. Alvida!") {
+                            speakEmotional("चलिए भाई, रॉक्स अब सो रहा है। जब भी बुलाना हो, बस आवाज़ दीजिएगा। अलविदा!") {
                                 shutdownService()
                             }
                             return true
@@ -621,7 +621,7 @@ class RoxOverlayService : Service() {
                 // 1. Check for Shutdown Command (e.g. "Rox off", "band ho jao", "so jao")
                 if (CodeWordMatcher.isShutdownCommand(transcript)) {
                     updateOrbState("closing", "Rox OFF ho raha hai...")
-                    speakEmotional("Theek hai boss! Rox off ho raha hai... Phir milenge, alvida!") {
+                    speakEmotional("ठीक है भाई! रॉक्स ऑफ हो रहा है... फिर मिलेंगे, अलविदा!") {
                         shutdownService()
                     }
                     return@launch
@@ -635,13 +635,13 @@ class RoxOverlayService : Service() {
                     if (matched) {
                         isCodeVerified = true
                         updateOrbState("code_verified", "Rox ON • Ready!")
-                        speakEmotional("Haan boss! Rox ON ho gaya hai... Boliye, kya madad karoon?") {
+                        speakEmotional("हाँ भाई! रॉक्स ऑन हो गया है... बोलिए, क्या मदद करूँ?") {
                             resumeRecordingAfterSpeech()
                         }
                     } else {
                         val displayTxt = if (transcript.isNotEmpty()) "Heard: '$transcript' • Dobara boliye" else "Code samajh nahi aaya"
                         updateOrbState("activating", displayTxt)
-                        speakEmotional("Arey code samajh nahi aaya boss... 'Rox ON' ya 'Rox 7' boliye na!") {
+                        speakEmotional("अरे कोड समझ नहीं आया भाई... 'रॉक्स ऑन' या 'रॉक्स 7' बोलिए ना!") {
                             resumeRecordingAfterSpeech()
                         }
                     }
@@ -649,7 +649,7 @@ class RoxOverlayService : Service() {
                     // Already active - check if user said "rox on" or wake command
                     if (CodeWordMatcher.isWakeCommand(transcript)) {
                         updateOrbState("code_verified", "Rox ON • Active!")
-                        speakEmotional("Haan boss! Rox ON hai aur aapko hi sun raha hai... Boliye kya baat hai?") {
+                        speakEmotional("हाँ भाई! रॉक्स ऑन है और आपको ही सुन रहा है... बोलिए क्या बात है?") {
                             resumeRecordingAfterSpeech()
                         }
                         return@launch
