@@ -58,16 +58,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v2.3-apk
-          name: "ROX Voice Assistant Android APK (v2.3 - Clean Floating Orb & Removed Subtitles)"
+          tag_name: v2.4-apk
+          name: "ROX Voice Assistant Android APK (v2.4 - Instant Screen Controls & Zero-Lag Voice)"
           body: |
-            ### 🔮 ROX Voice Assistant Android APK (v2.3 - Pure Clean Orb)
+            ### 🔮 ROX Voice Assistant Android APK (v2.4 - Screen Controls & Instant Response)
             
-            ✅ **Major Enhancements in v2.3**:
-            - 🧼 **Clean Minimal Orb (Removed Text Underneath)**: Removed the status text / subtitle pill from below the 3D orb. Now you get a pure, distraction-free floating 3D glowing orb with zero clutter.
-            - 📐 **Ultra-Compact Window (150dp x 150dp)**: Without the text pill, the floating overlay is reduced to an ultra-compact circular footprint, completely eliminating screen blocking.
-            - 🎙️ **Pure Neural Indian Voice Engine (`hi-IN-MadhurNeural`)**: Direct Node.js Edge-TTS engine with full Sec-MS-GEC v2 support.
-            - 🗣️ **Instant Voice Code Words**: *"Rox on"* / *"Rox 7"* to activate, *"Rox off"* / *"so jao"* to sleep.
+            ✅ **Major Enhancements in v2.4**:
+            - ⚡ **Zero-Lag Speech & TTS Fix (Khatam Hua Atakna & Delay)**:
+              - Removed slow secondary server-side transliteration LLM call from `/api/transcribe`, saving 2+ seconds per voice command!
+              - Switched Android TTS playback from sluggish `MediaPlayer.setDataSource(url)` streaming to ultra-fast OkHttp streaming into local cache (<5ms instant playback), completely eliminating network audio freezing ("atakna band!").
+              - Added immediate offline fallback watchdog so Rox never hangs in silence.
+              - Ambient room noise filter ignores empty/micro sound bursts immediately.
+            - 📱 **Full Voice Screen Controls Suite**:
+              - **Navigation**: *"Home jao"*, *"Back karo"*, *"Recent apps kholo"*, *"Notifications dikhao"*, *"Quick settings kholo"*.
+              - **Actions & Gestures**: *"Screenshot lo"*, *"Screen lock karo"*, *"Neeche scroll karo"*, *"Upar scroll karo"*.
+              - **App Launcher**: *"WhatsApp kholo"*, *"YouTube chalao"*, *"Camera open karo"*, *"Instagram kholo"*, *"Settings kholo"*, etc.
+              - **Hardware Controls**: *"Torch on / off karo"*, *"Volume badhao / kam karo"*, *"Mute karo"*.
+            - 🧼 **Clean Minimal Orb (150dp x 150dp)**: Subtitle text pill removed, pure floating 3D glowing orb with zero screen blocking.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.

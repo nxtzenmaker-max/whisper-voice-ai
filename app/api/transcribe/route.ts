@@ -67,37 +67,7 @@ export async function POST(req: NextRequest) {
       temperature: 0.0,
     });
 
-    let text = transcription.text.trim();
-
-    // If Hinglish is requested and text contains Devanagari characters,
-    // transliterate into clean natural conversational Roman Hinglish (e.g. "Aaj ka din kaisa hai")
-    if (language === 'hinglish' && /[\u0900-\u097F]/.test(text)) {
-      try {
-        const translit = await groq.chat.completions.create({
-          model: 'qwen/qwen3.8-27b',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'Transliterate Hindi Devanagari text into natural conversational Roman Hinglish (English alphabet, e.g. "Aaj ka din kaisa tha aur kya chal raha hai"). If text is in English, keep it as is. Output ONLY the transliterated text, nothing else. No explanation.',
-            },
-            {
-              role: 'user',
-              content: text,
-            },
-          ],
-          temperature: 0.0,
-          max_tokens: 300,
-        });
-
-        const transliterated = translit.choices[0]?.message?.content?.trim();
-        if (transliterated && transliterated.length > 0) {
-          text = transliterated;
-        }
-      } catch (err) {
-        console.error('Hinglish transliteration fallback error:', err);
-      }
-    }
+    const text = transcription.text.trim();
 
     const latencyMs = Date.now() - startTime;
 

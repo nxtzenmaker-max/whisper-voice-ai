@@ -1,8 +1,10 @@
 package com.nxtzenmaker.jarvis
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.content.Intent
+import android.graphics.Path
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -12,9 +14,24 @@ import android.view.accessibility.AccessibilityEvent
 
 class RoxAccessibilityService : AccessibilityService() {
 
+    companion object {
+        var instance: RoxAccessibilityService? = null
+            private set
+    }
+
     private val volumeDownPressTimes = mutableListOf<Long>()
     private val REQUIRED_PRESSES = 3
     private val TIME_WINDOW_MS = 1500L
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        instance = this
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (instance == this) instance = null
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // Not used
@@ -45,6 +62,70 @@ class RoxAccessibilityService : AccessibilityService() {
             }
         }
         return super.onKeyEvent(event)
+    }
+
+    // --- Screen Control Actions ---
+
+    fun goHome(): Boolean = performGlobalAction(GLOBAL_ACTION_HOME)
+
+    fun goBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
+
+    fun openRecents(): Boolean = performGlobalAction(GLOBAL_ACTION_RECENTS)
+
+    fun openNotifications(): Boolean = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+
+    fun openQuickSettings(): Boolean = performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+
+    fun lockScreen(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+        } else {
+            false
+        }
+    }
+
+    fun takeScreenshot(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+        } else {
+            false
+        }
+    }
+
+    fun scrollDown(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val displayMetrics = resources.displayMetrics
+            val width = displayMetrics.widthPixels.toFloat()
+            val height = displayMetrics.heightPixels.toFloat()
+
+            val path = Path().apply {
+                moveTo(width / 2f, height * 0.75f)
+                lineTo(width / 2f, height * 0.25f)
+            }
+            val gesture = GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
+                .build()
+            return dispatchGesture(gesture, null, null)
+        }
+        return false
+    }
+
+    fun scrollUp(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val displayMetrics = resources.displayMetrics
+            val width = displayMetrics.widthPixels.toFloat()
+            val height = displayMetrics.heightPixels.toFloat()
+
+            val path = Path().apply {
+                moveTo(width / 2f, height * 0.25f)
+                lineTo(width / 2f, height * 0.75f)
+            }
+            val gesture = GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
+                .build()
+            return dispatchGesture(gesture, null, null)
+        }
+        return false
     }
 
     private fun vibrateFeedback() {

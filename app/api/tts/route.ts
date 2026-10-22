@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       return new NextResponse(new Uint8Array(audioBuffer), {
         headers: {
           'Content-Type': 'audio/mpeg',
+          'Content-Length': audioBuffer.length.toString(),
           'Cache-Control': 'public, max-age=86400',
           'Access-Control-Allow-Origin': '*',
         },
