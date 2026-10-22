@@ -172,10 +172,15 @@ class MainActivity : AppCompatActivity() {
     private fun updateVoiceDisplay() {
         val voice = Prefs.getVoiceModel(this)
         val label = when (voice) {
-            "hi-IN-MadhurNeural" -> "Madhur (Emotional Hindi)"
-            "hi-IN-SwaraNeural" -> "Swara (Expressive Female)"
-            "en-IN-PrabhatNeural" -> "Prabhat (Tech Male)"
-            "en-IN-NeerjaExpressiveNeural" -> "Neerja (Expressive Female)"
+            "eleven_adam" -> "Adam (ElevenLabs Emotional Male)"
+            "eleven_rachel" -> "Rachel (ElevenLabs Emotional Female)"
+            "eleven_antoni" -> "Antoni (ElevenLabs Energetic Male)"
+            "eleven_bella" -> "Bella (ElevenLabs Expressive Female)"
+            "eleven_daniel" -> "Daniel (ElevenLabs Deep Male)"
+            "hi-IN-MadhurNeural" -> "Madhur (Edge-TTS Hindi Male)"
+            "hi-IN-SwaraNeural" -> "Swara (Edge-TTS Hindi Female)"
+            "en-IN-PrabhatNeural" -> "Prabhat (Edge-TTS Indian Male)"
+            "en-IN-NeerjaExpressiveNeural" -> "Neerja (Edge-TTS Indian Female)"
             else -> voice
         }
         binding.tvCurrentVoice.text = label
@@ -183,22 +188,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun showVoiceSelectorDialog() {
         val voiceOptions = arrayOf(
-            "Madhur (Deep & Emotional Hindi Male - Recommended)",
-            "Swara (Expressive & Warm Hindi Female)",
-            "Prabhat (Tech Indian Male)",
-            "Neerja (Expressive English-Hindi Female)"
+            "Adam (ElevenLabs Deep Emotional Male - Active)",
+            "Rachel (ElevenLabs Warm & Expressive Female)",
+            "Antoni (ElevenLabs Energetic & Friendly Male)",
+            "Bella (ElevenLabs Expressive Female)",
+            "Daniel (ElevenLabs Deep & Authoritative Male)",
+            "Madhur (Edge-TTS Fast Hindi Male)",
+            "Swara (Edge-TTS Expressive Hindi Female)",
+            "Prabhat (Edge-TTS Tech Indian Male)"
         )
         val voiceValues = arrayOf(
+            "eleven_adam",
+            "eleven_rachel",
+            "eleven_antoni",
+            "eleven_bella",
+            "eleven_daniel",
             "hi-IN-MadhurNeural",
             "hi-IN-SwaraNeural",
-            "en-IN-PrabhatNeural",
-            "en-IN-NeerjaExpressiveNeural"
+            "en-IN-PrabhatNeural"
         )
         val currentVoice = Prefs.getVoiceModel(this)
         val selectedIndex = voiceValues.indexOf(currentVoice).let { if (it >= 0) it else 0 }
 
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Select Rox Voice & Emotion")
+            .setTitle("Select Rox Voice (ElevenLabs & Edge)")
             .setSingleChoiceItems(voiceOptions, selectedIndex) { dialog, which ->
                 val chosenVoice = voiceValues[which]
                 Prefs.setVoiceModel(this, chosenVoice)
@@ -206,7 +219,39 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Voice set to ${voiceOptions[which].split(" (")[0]}", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
+            .setNeutralButton("ElevenLabs Key") { _, _ ->
+                showElevenLabsApiKeyDialog()
+            }
             .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun showElevenLabsApiKeyDialog() {
+        val currentKey = Prefs.getElevenLabsApiKey(this)
+        val input = android.widget.EditText(this).apply {
+            setText(currentKey)
+            hint = "sk_..."
+            setPadding(40, 30, 40, 30)
+            setTextColor(android.graphics.Color.WHITE)
+            setHintTextColor(android.graphics.Color.GRAY)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("ElevenLabs TTS API Key")
+            .setMessage("Used strictly for Text-to-Speech (TTS) emotional voice synthesis. Default key is pre-configured.")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newKey = input.text.toString().trim()
+                if (newKey.isNotEmpty()) {
+                    Prefs.setElevenLabsApiKey(this, newKey)
+                    Toast.makeText(this, "ElevenLabs API Key saved!", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNeutralButton("Reset Default") { _, _ ->
+                Prefs.resetElevenLabsApiKey(this)
+                Toast.makeText(this, "Reset to default ElevenLabs Key", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -515,11 +560,15 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 binding.tvJarvisReply.text = "\"$replyText\""
-                binding.tvStatusSub.text = "Prabhat (+20% speed) speaking..."
+                val activeVoice = Prefs.getVoiceModel(this@MainActivity)
+                val elevenKey = Prefs.getElevenLabsApiKey(this@MainActivity)
+                binding.tvStatusSub.text = "ROX speaking..."
 
-                val ttsUrl = apiClient.getTtsAudioUrl(replyText)
-                audioPlayer.playUrl(
-                    url = ttsUrl,
+                audioPlayer.playSpeech(
+                    text = replyText,
+                    voice = activeVoice,
+                    elevenApiKey = elevenKey,
+                    baseUrl = apiClient.baseUrl,
                     onStart = {
                         binding.tvMicStatus.text = "ROX Speaking..."
                     },
@@ -545,11 +594,15 @@ class MainActivity : AppCompatActivity() {
 
                 val replyText = "Haan boss, Rox online hai. Aapki aawaz verify ho gayi hai."
                 binding.tvJarvisReply.text = "\"$replyText\""
-                binding.tvStatusSub.text = "Prabhat (+20% speed) speaking..."
+                val activeVoice = Prefs.getVoiceModel(this@MainActivity)
+                val elevenKey = Prefs.getElevenLabsApiKey(this@MainActivity)
+                binding.tvStatusSub.text = "ROX speaking..."
 
-                val ttsUrl = apiClient.getTtsAudioUrl(replyText)
-                audioPlayer.playUrl(
-                    url = ttsUrl,
+                audioPlayer.playSpeech(
+                    text = replyText,
+                    voice = activeVoice,
+                    elevenApiKey = elevenKey,
+                    baseUrl = apiClient.baseUrl,
                     onStart = {
                         binding.tvMicStatus.text = "ROX Speaking..."
                     },

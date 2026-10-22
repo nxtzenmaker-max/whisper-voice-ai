@@ -93,16 +93,18 @@ class ApiClient(var baseUrl: String = "https://whisper-voice-ai.vercel.app") {
 
     fun getTtsAudioUrl(
         text: String,
-        voice: String = "hi-IN-MadhurNeural",
+        voice: String = "eleven_adam",
         rate: String = "+5%",
-        pitch: String = "+2Hz"
+        pitch: String = "+2Hz",
+        elevenLabsKey: String = ""
     ): String {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val encodedText = URLEncoder.encode(text, "UTF-8")
         val encodedVoice = URLEncoder.encode(voice, "UTF-8")
         val encodedRate = URLEncoder.encode(rate, "UTF-8")
         val encodedPitch = URLEncoder.encode(pitch, "UTF-8")
-        return "$cleanBaseUrl/api/tts?voice=$encodedVoice&rate=$encodedRate&pitch=$encodedPitch&text=$encodedText"
+        val keyParam = if (elevenLabsKey.isNotBlank()) "&elevenlabs_key=" + URLEncoder.encode(elevenLabsKey, "UTF-8") else ""
+        return "$cleanBaseUrl/api/tts?voice=$encodedVoice&rate=$encodedRate&pitch=$encodedPitch$keyParam&text=$encodedText"
     }
 
     data class VoiceprintStatus(

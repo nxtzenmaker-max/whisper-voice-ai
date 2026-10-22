@@ -5,9 +5,13 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const rawText = url.searchParams.get('text') || 'Arrey boss! Rox hazir hai. Boliye, aaj kya kamaal karna hai?';
-    const voice = url.searchParams.get('voice') || 'hi-IN-MadhurNeural';
+    const voice = url.searchParams.get('voice') || 'eleven_adam';
     const rate = url.searchParams.get('rate') || '+4%';
     const pitch = url.searchParams.get('pitch') || '+2Hz';
+    const elevenKey =
+      req.headers.get('x-elevenlabs-key') ||
+      url.searchParams.get('elevenlabs_key') ||
+      process.env.ELEVENLABS_API_KEY;
 
     // Conversational text cleanup for human speech prosody
     const cleanText = rawText
@@ -15,9 +19,62 @@ export async function GET(req: NextRequest) {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // 1. Primary: Pure Node.js Edge-TTS with Sec-MS-GEC v2 (Native on Vercel)
+    // 1. ElevenLabs TTS (Ultra-realistic emotional voice synthesis)
+    const voiceIdMap: Record<string, string> = {
+      eleven_adam: 'pNInz6obpgDQGcFmaJgB',
+      eleven_rachel: '21m00Tcm4TlvDq8ikWAM',
+      eleven_antoni: 'ErXwobaYiN019PkySvjV',
+      eleven_bella: 'EXAVITQu4vr4xnSDxMaL',
+      eleven_daniel: 'onwK4e9ZLuTAKqWW03F9',
+    };
+
+    const isElevenVoice = voice.startsWith('eleven_') || voice.length === 20;
+    if (elevenKey && (isElevenVoice || url.searchParams.get('provider') === 'elevenlabs')) {
+      try {
+        const voiceId = voiceIdMap[voice] || (voice.length === 20 ? voice : 'pNInz6obpgDQGcFmaJgB');
+        const elevenRes = await fetch(
+          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+          {
+            method: 'POST',
+            headers: {
+              'xi-api-key': elevenKey,
+              'Content-Type': 'application/json',
+              'Accept': 'audio/mpeg',
+            },
+            body: JSON.stringify({
+              text: cleanText,
+              model_id: 'eleven_turbo_v2_5',
+              voice_settings: {
+                stability: 0.5,
+                similarity_boost: 0.8,
+                style: 0.15,
+                use_speaker_boost: true,
+              },
+            }),
+          }
+        );
+
+        if (elevenRes.ok) {
+          const buffer = await elevenRes.arrayBuffer();
+          return new NextResponse(buffer, {
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'Cache-Control': 'public, max-age=86400',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        } else {
+          console.warn('ElevenLabs API response not ok:', elevenRes.status);
+        }
+      } catch (elevenErr) {
+        console.warn('ElevenLabs TTS error, falling back:', elevenErr);
+      }
+    }
+
+    // 2. Primary fallback: Pure Node.js Edge-TTS with Sec-MS-GEC v2 (Native on Vercel)
     try {
-      const audioBuffer = await synthesizeEdgeTTS(cleanText, voice, rate, pitch);
+      const edgeVoice = voice.startsWith('hi-') || voice.startsWith('en-') ? voice : 'hi-IN-MadhurNeural';
+      const audioBuffer = await synthesizeEdgeTTS(cleanText, edgeVoice, rate, pitch);
       return new NextResponse(new Uint8Array(audioBuffer), {
         headers: {
           'Content-Type': 'audio/mpeg',

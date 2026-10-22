@@ -377,31 +377,33 @@ class JarvisService : Service() {
             // Stop mic recording IMMEDIATELY so phone leaves recording state and routes to loudspeaker!
             pauseRecordingForSpeech()
 
-            val ttsUrl = apiClient.getTtsAudioUrl(replyText)
-            withContext(Dispatchers.Main) {
-                audioPlayer.playUrl(
-                    url = ttsUrl,
-                    onStart = {
-                        updateNotification("🗣️ ROX Speaking (Loudspeaker)...")
-                        broadcastStatus("SPEAKING", replyText, res.matchPercent, res.pitch)
-                    },
-                    onComplete = {
-                        serviceScope.launch {
-                            delay(500) // Clear room echo before mic resumes
-                            resumeRecordingAfterSpeech()
-                            updateNotification("🟢 ROX Active • Listening for your voice...")
-                            broadcastStatus("IDLE", "Standby", 0.0, 0)
-                        }
-                    },
-                    onError = {
-                        serviceScope.launch {
-                            resumeRecordingAfterSpeech()
-                            updateNotification("🟢 ROX Active • Listening for your voice...")
-                            broadcastStatus("IDLE", "Standby", 0.0, 0)
-                        }
+            val voice = Prefs.getVoiceModel(this@JarvisService)
+            val elevenKey = Prefs.getElevenLabsApiKey(this@JarvisService)
+            audioPlayer.playSpeech(
+                text = replyText,
+                voice = voice,
+                elevenApiKey = elevenKey,
+                baseUrl = apiClient.baseUrl,
+                onStart = {
+                    updateNotification("🗣️ ROX Speaking (Loudspeaker)...")
+                    broadcastStatus("SPEAKING", replyText, res.matchPercent, res.pitch)
+                },
+                onComplete = {
+                    serviceScope.launch {
+                        delay(500) // Clear room echo before mic resumes
+                        resumeRecordingAfterSpeech()
+                        updateNotification("🟢 ROX Active • Listening for your voice...")
+                        broadcastStatus("IDLE", "Standby", 0.0, 0)
                     }
-                )
-            }
+                },
+                onError = {
+                    serviceScope.launch {
+                        resumeRecordingAfterSpeech()
+                        updateNotification("🟢 ROX Active • Listening for your voice...")
+                        broadcastStatus("IDLE", "Standby", 0.0, 0)
+                    }
+                }
+            )
         } else {
             // NOT OWNER! STRICT SECURITY GATE: ZERO AUDIO OUTPUT!
             updateNotification("🔇 Stranger voice blocked (${res.matchPercent}%)")

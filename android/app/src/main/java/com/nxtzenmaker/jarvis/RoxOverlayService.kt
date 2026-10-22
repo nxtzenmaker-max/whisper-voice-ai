@@ -345,28 +345,31 @@ class RoxOverlayService : Service() {
                 val voice = Prefs.getVoiceModel(this@RoxOverlayService)
                 val rate = Prefs.getVoiceRate(this@RoxOverlayService)
                 val pitch = Prefs.DEFAULT_PITCH
-                val ttsUrl = apiClient.getTtsAudioUrl(text, voice = voice, rate = rate, pitch = pitch)
+                val elevenKey = Prefs.getElevenLabsApiKey(this@RoxOverlayService)
 
-                withContext(Dispatchers.Main) {
-                    audioPlayer.playUrl(
-                        url = ttsUrl,
-                        onStart = {
-                            isSpeaking = true
-                        },
-                        onComplete = {
-                            isSpeaking = false
-                            speechAnimJob.cancel()
-                            feedAudioLevelToOrb(0.04f)
-                            onComplete?.invoke()
-                        },
-                        onError = {
-                            isSpeaking = false
-                            speechAnimJob.cancel()
-                            feedAudioLevelToOrb(0.04f)
-                            fallbackSpeak(text, onComplete)
-                        }
-                    )
-                }
+                audioPlayer.playSpeech(
+                    text = text,
+                    voice = voice,
+                    elevenApiKey = elevenKey,
+                    baseUrl = apiClient.baseUrl,
+                    rate = rate,
+                    pitch = pitch,
+                    onStart = {
+                        isSpeaking = true
+                    },
+                    onComplete = {
+                        isSpeaking = false
+                        speechAnimJob.cancel()
+                        feedAudioLevelToOrb(0.04f)
+                        onComplete?.invoke()
+                    },
+                    onError = {
+                        isSpeaking = false
+                        speechAnimJob.cancel()
+                        feedAudioLevelToOrb(0.04f)
+                        fallbackSpeak(text, onComplete)
+                    }
+                )
             } catch (e: Exception) {
                 isSpeaking = false
                 speechAnimJob.cancel()

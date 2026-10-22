@@ -58,31 +58,29 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v2.5-apk
-          name: "ROX Voice Assistant Android APK (v2.5 - WhatsApp Voice Messaging & Auto-Send)"
+          tag_name: v2.6-apk
+          name: "ROX Voice Assistant Android APK (v2.6 - ElevenLabs Ultra-Emotional Voice)"
           body: |
-            ### 🔮 ROX Voice Assistant Android APK (v2.5 - WhatsApp Voice Messaging)
+            ### 🎙️ ROX Voice Assistant Android APK (v2.6 - ElevenLabs Ultra-Emotional Voice)
             
-            ✅ **Major Enhancements in v2.5**:
+            ✅ **Major Enhancements in v2.6**:
+            - 🎭 **ElevenLabs Ultra-Emotional TTS Integration**:
+              - Rox ab neutral/robotic nahi balki **insan ki tarah emotional, expressive aur natural Hinglish/Hindi** bolega!
+              - Powered by **ElevenLabs Turbo v2.5** (< 250ms ultra-low latency direct playback).
+              - Default voice: **Adam** (Deep, Charismatic & Emotional Male).
+              - Other voices selectable from settings: **Rachel** (Warm Female), **Antoni** (Energetic Male), **Bella** (Expressive Female), **Daniel** (Deep Male).
+              - Seamless multi-layer fallback: ElevenLabs ➔ Edge-TTS (`hi-IN-MadhurNeural`) ➔ Local Android TTS. Rox kabhi chup ya hang nahi hoga!
             - 💬 **WhatsApp Direct Voice Messaging & Auto-Send**:
-              - **Phone Numbers**: Bol kar seedha message bhejein:
-                > *"WhatsApp par 9876543210 ko message bhejo: Kal subah milte hain"*
-                Rox chat open karke Accessibility Service se **automatically Send button tap** kar dega!
-              - **Contact Names**: Contacts me save naam bol kar bhejein:
-                > *"WhatsApp par Rahul ko message karo: Kahan ho bhai?"*
-            - 📱 **Full Screen Controls Suite**:
-              - **Navigation**: *"Home jao"*, *"Back karo"*, *"Recent apps kholo"*, *"Notifications dikhao"*, *"Quick settings kholo"*.
-              - **Actions & Gestures**: *"Screenshot lo"*, *"Screen lock karo"*, *"Neeche scroll karo"*, *"Upar scroll karo"*.
-              - **App Launcher**: *"WhatsApp kholo"*, *"YouTube chalao"*, *"Camera open karo"*, *"Instagram kholo"*, *"Settings kholo"*, etc.
-              - **Hardware Controls**: *"Torch on / off karo"*, *"Volume badhao / kam karo"*, *"Mute karo"*.
-            - ⚡ **Zero-Lag & Instant TTS**: Fast streaming into local audio cache (<5ms) with zero freezing.
-            - 🧼 **Clean Minimal Orb (150dp x 150dp)**: Distraction-free floating 3D glowing orb.
+              - Phone number ya Saved Contact name bol kar seedha message bhejein, auto-send button tap hota hai.
+            - 📱 **Full Voice Screen Controls**:
+              - Home, Back, Recents, Notifications, Quick Settings, Screenshot, Screen Lock, Scroll, Torch, Volume.
+            - 🧼 **Clean Minimal Orb (150dp x 150dp)** with zero screen blockage.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.
             2. Tap "Install" or "Update".
-            3. Grant "Display over other apps", "Microphone", and "Accessibility".
-            4. Drag "Rox AI" into Quick Settings or press Volume Down 3 times!
+            3. Tap Voice row in the app to switch between Adam, Rachel, Antoni, Bella, or Madhur.
+            4. Start talking with Rox!
           draft: false
           prerelease: false
           files: Rox-Voice-Assistant.apk
