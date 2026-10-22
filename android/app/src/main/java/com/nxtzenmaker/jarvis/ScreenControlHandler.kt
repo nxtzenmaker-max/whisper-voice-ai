@@ -6,23 +6,31 @@ import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
+import java.net.URLEncoder
 
 object ScreenControlHandler {
 
     private var isTorchOn = false
 
     /**
-     * Checks if the spoken transcript is a screen or hardware control command.
+     * Checks if the spoken transcript is a screen, app, or WhatsApp voice command.
      * Executes the action on the device and returns the spoken feedback string.
-     * Returns null if not a screen/device action.
+     * Returns null if not a recognized control action.
      */
     fun handleCommand(context: Context, transcript: String): String? {
         val norm = normalize(transcript)
         if (norm.isEmpty()) return null
 
         val accessibility = RoxAccessibilityService.instance
+
+        // 0. WhatsApp Voice Messaging ("WhatsApp par [Number/Name] ko message bhejo [Message]")
+        val waReply = handleWhatsAppMessaging(context, transcript, norm)
+        if (waReply != null) {
+            return waReply
+        }
 
         // 1. Home Screen
         if (matchesAny(norm, "home", "home screen", "home jao", "ghar jao", "go home", "main screen")) {
@@ -119,12 +127,135 @@ object ScreenControlHandler {
         return null
     }
 
+    /**
+     * Handles WhatsApp Voice Messaging:
+     * - Parses direct phone numbers (e.g. 9876543210 or +91...)
+     * - Parses contact names and resolves them via ContactsProvider
+     * - Extracts the message body
+     * - Opens WhatsApp chat and auto-clicks Send via AccessibilityService
+     */
+    private fun handleWhatsAppMessaging(context: Context, raw: String, norm: String): String? {
+        val mentionsWhatsApp = norm.contains("whatsapp") || norm.contains("व्हाट्सएप") || norm.contains("व्हाट्सऐप")
+        val hasMessageAction = listOf("message", "msg", "bolo", "kehna", "send", "text", "भेजो", "करो", "कहो", "लिखो")
+            .any { norm.contains(it) }
+
+        if (!mentionsWhatsApp || !hasMessageAction) {
+            return null
+        }
+
+        // Case 1: Direct Phone Number (10 to 12 digits, optional leading +)
+        val phoneRegex = Regex("(\\+?\\d{10,12})")
+        val phoneMatch = phoneRegex.find(raw)
+
+        if (phoneMatch != null) {
+            val phoneStr = phoneMatch.value
+            val cleanDigits = phoneStr.replace(Regex("[^0-9]"), "")
+            val cleanPhone = if (cleanDigits.length == 10) "91$cleanDigits" else cleanDigits
+
+            // Extract message: everything after the phone number
+            val textAfterPhone = raw.substring(phoneMatch.range.last + 1).trim()
+            val message = cleanMessagePrefix(textAfterPhone).ifBlank { "Hello!" }
+
+            return sendWhatsAppDirect(context, cleanPhone, phoneStr, message)
+        }
+
+        // Case 2: Contact Name (e.g. "whatsapp par rahul ko message bhejo kal aana")
+        val namePattern = Regex("whatsapp\\s+(?:par|pe|mein)?\\s*([a-zA-Z\u0900-\u097F\\s]{2,25})\\s+ko\\s+(?:message|msg|bolo|send|text)?\\s*(.*)", RegexOption.IGNORE_CASE)
+        val nameMatch = namePattern.find(raw)
+
+        if (nameMatch != null) {
+            val contactName = nameMatch.groupValues[1].trim()
+            val textPart = nameMatch.groupValues[2].trim()
+            val message = cleanMessagePrefix(textPart).ifBlank { "Hello!" }
+
+            val resolvedPhone = findContactPhoneNumber(context, contactName)
+            if (resolvedPhone != null) {
+                val cleanDigits = resolvedPhone.replace(Regex("[^0-9]"), "")
+                val cleanPhone = if (cleanDigits.length == 10) "91$cleanDigits" else cleanDigits
+                return sendWhatsAppDirect(context, cleanPhone, contactName, message)
+            } else {
+                return "Boss, contacts me '$contactName' ka number nahi mila. Aap direct number bol kar message bhej sakte hain jaise: 'WhatsApp par 9876543210 ko message bhejo'."
+            }
+        }
+
+        return null
+    }
+
+    private fun cleanMessagePrefix(text: String): String {
+        var t = text.trim()
+        val prefixes = listOf(
+            "ko message bhejo", "ko message karo", "ko text bhejo", "ko text karo",
+            "ko bolo", "ko kehna", "ko likho", "message bhejo", "message karo",
+            "bolo", "send", "text", "ki", ":"
+        )
+        for (p in prefixes) {
+            if (t.lowercase().startsWith(p)) {
+                t = t.substring(p.length).trim()
+            }
+        }
+        return t.removePrefix(":").removePrefix("-").trim()
+    }
+
+    private fun sendWhatsAppDirect(context: Context, cleanPhone: String, displayName: String, message: String): String {
+        try {
+            val encodedMsg = URLEncoder.encode(message, "UTF-8")
+            val uri = Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=$encodedMsg")
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                setPackage("com.whatsapp")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+
+            // Trigger auto-send button click in AccessibilityService
+            RoxAccessibilityService.instance?.scheduleWhatsAppAutoSend()
+
+            context.startActivity(intent)
+            return "Ji boss, $displayName ko WhatsApp par message bhej diya!"
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Generic browser/WhatsApp fallback
+            try {
+                val encodedMsg = URLEncoder.encode(message, "UTF-8")
+                val uri = Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=$encodedMsg")
+                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                return "Ji boss, $displayName ke liye WhatsApp chat open kar di hai!"
+            } catch (_: Exception) {
+                return "WhatsApp open nahi ho paya boss. Please check karein ki phone me WhatsApp installed hai."
+            }
+        }
+    }
+
+    private fun findContactPhoneNumber(context: Context, nameQuery: String): String? {
+        try {
+            val uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+            val projection = arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            )
+            val selection = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?"
+            val selectionArgs = arrayOf("%$nameQuery%")
+
+            context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val numberIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    if (numberIdx != -1) {
+                        return cursor.getString(numberIdx)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
     private fun launchAppIfMatched(context: Context, norm: String): String? {
         val appKeywords = listOf("kholo", "open", "chalao", "start", "laga do", "chalu karo")
         val isAppIntent = appKeywords.any { norm.contains(it) }
         if (!isAppIntent) return null
 
-        // Well-known popular app package mappings
         val knownApps = mapOf(
             "whatsapp" to listOf("com.whatsapp", "WhatsApp"),
             "youtube" to listOf("com.google.android.youtube", "YouTube"),
@@ -245,7 +376,10 @@ object ScreenControlHandler {
             .replace("वॉल्यूम", "volume")
             .replace("खोलो", "kholo")
             .replace("चलाओ", "chalao")
-            .replace("बंद", "band")
+            .replace("व्हाट्सएप", "whatsapp")
+            .replace("व्हाट्सऐप", "whatsapp")
+            .replace("भेजो", "bhejo")
+            .replace("बोलो", "bolo")
             .replace(Regex("\\s+"), " ")
             .trim()
     }

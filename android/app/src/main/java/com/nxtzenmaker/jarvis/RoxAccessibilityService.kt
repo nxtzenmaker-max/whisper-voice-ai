@@ -11,6 +11,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 
 class RoxAccessibilityService : AccessibilityService() {
 
@@ -23,6 +24,15 @@ class RoxAccessibilityService : AccessibilityService() {
     private val REQUIRED_PRESSES = 3
     private val TIME_WINDOW_MS = 1500L
 
+    @Volatile
+    private var pendingWhatsAppAutoSend = false
+    private var whatsAppAutoSendStartTime = 0L
+
+    fun scheduleWhatsAppAutoSend() {
+        pendingWhatsAppAutoSend = true
+        whatsAppAutoSendStartTime = System.currentTimeMillis()
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
@@ -34,7 +44,66 @@ class RoxAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Not used
+        if (!pendingWhatsAppAutoSend) return
+
+        if (System.currentTimeMillis() - whatsAppAutoSendStartTime > 8000L) {
+            pendingWhatsAppAutoSend = false
+            return
+        }
+
+        val root = rootInActiveWindow ?: return
+        val pkg = root.packageName?.toString() ?: ""
+        if (pkg.contains("whatsapp")) {
+            // Strategy 1: Find by view ID 'com.whatsapp:id/send'
+            val sendById = root.findAccessibilityNodeInfosByViewId("com.whatsapp:id/send")
+            if (sendById.isNotEmpty()) {
+                val btn = sendById.first()
+                if (btn.isClickable) {
+                    btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    pendingWhatsAppAutoSend = false
+                    return
+                }
+            }
+
+            // Strategy 2: Find by description or text
+            val sendByDesc = mutableListOf<AccessibilityNodeInfo>()
+            findSendNode(root, sendByDesc)
+            if (sendByDesc.isNotEmpty()) {
+                for (node in sendByDesc) {
+                    if (node.isClickable) {
+                        node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        pendingWhatsAppAutoSend = false
+                        return
+                    } else {
+                        var parent = node.parent
+                        while (parent != null) {
+                            if (parent.isClickable) {
+                                parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                pendingWhatsAppAutoSend = false
+                                return
+                            }
+                            parent = parent.parent
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun findSendNode(node: AccessibilityNodeInfo?, result: MutableList<AccessibilityNodeInfo>) {
+        if (node == null) return
+        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+        val text = node.text?.toString()?.lowercase() ?: ""
+        val viewId = node.viewIdResourceName?.lowercase() ?: ""
+
+        if (viewId.contains("send") || desc == "send" || desc.contains("भेजें") || text == "send" || text.contains("भेजें")) {
+            result.add(node)
+            return
+        }
+
+        for (i in 0 until node.childCount) {
+            findSendNode(node.getChild(i), result)
+        }
     }
 
     override fun onInterrupt() {
