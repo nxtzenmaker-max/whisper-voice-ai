@@ -58,18 +58,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
-          tag_name: v2.2-apk
-          name: "ROX Voice Assistant Android APK (v2.2 - Pure Neural Human Voice & 'Rox on/off' Voice Codes)"
+          tag_name: v2.3-apk
+          name: "ROX Voice Assistant Android APK (v2.3 - Clean Floating Orb & Removed Subtitles)"
           body: |
-            ### 🔮 ROX Voice Assistant Android APK (v2.2 - Pure Neural Voice & Code Words)
+            ### 🔮 ROX Voice Assistant Android APK (v2.3 - Pure Clean Orb)
             
-            ✅ **Major Enhancements in v2.2**:
-            - 🎙️ **Direct Pure Neural Edge-TTS Engine**: Fixed the monotone "reading text like a robot" issue! Powered by pure Node.js Edge-TTS engine with DRM Sec-MS-GEC v2 support. Generates rich, alive, human-like Indian neural voice (`hi-IN-MadhurNeural`) with zero robotic fallback.
-            - 🗣️ **Official Voice Code Words Supported**:
-              - **Turn ON / Wake**: *"Rox on"*, *"Rox 7"*, *"Rox start"*, *"Rox chalu ho jao"*, *"Rox suno"*.
-              - **Turn OFF / Sleep**: *"Rox off"*, *"Rox band ho jao"*, *"Rox stop"*, *"Rox close"*, *"so jao"*, *"alvida"*.
-            - 💬 **Human Conversational Tone**: Rox now speaks like a real Indian buddy/brother on a phone call with natural breathing pauses (`...`, `,`) and colloquial warmth rather than reading written paragraphs.
-            - 📏 **Zero-Tap Continuous Hands-Free & Zero Ghost Board**: Fluid hands-free continuous conversations with compact overlay bounds.
+            ✅ **Major Enhancements in v2.3**:
+            - 🧼 **Clean Minimal Orb (Removed Text Underneath)**: Removed the status text / subtitle pill from below the 3D orb. Now you get a pure, distraction-free floating 3D glowing orb with zero clutter.
+            - 📐 **Ultra-Compact Window (150dp x 150dp)**: Without the text pill, the floating overlay is reduced to an ultra-compact circular footprint, completely eliminating screen blocking.
+            - 🎙️ **Pure Neural Indian Voice Engine (`hi-IN-MadhurNeural`)**: Direct Node.js Edge-TTS engine with full Sec-MS-GEC v2 support.
+            - 🗣️ **Instant Voice Code Words**: *"Rox on"* / *"Rox 7"* to activate, *"Rox off"* / *"so jao"* to sleep.
             
             📥 **How to Install**:
             1. Download `Rox-Voice-Assistant.apk` below.
